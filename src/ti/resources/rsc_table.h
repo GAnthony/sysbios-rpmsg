@@ -120,10 +120,18 @@
 #define VIRTIO_ID_RPMSG		7 /* virtio remote processor messaging */
 
 /* Indices of rpmsg virtio features we support */
-#define VIRTIO_RPMSG_F_NS	0 /* RP supports name service notifications */
+/*
+ * We support name service notifications
+ */
+#define VIRTIO_RPMSG_F_NS               0
+/*
+ * We run on a remote processor, so always use mandatory memory barriers.
+ */
+#define VIRTIO_RING_F_REMOTEPROC	30
 
 /* flip up bits whose indices represent features we support */
-#define IPU_C0_FEATURES         1
+#define IPU_C0_FEATURES         ((1 << VIRTIO_RPMSG_F_NS) | \
+				 (1 << VIRTIO_RING_F_REMOTEPROC))
 
 /* Resource info: Must match include/linux/remoteproc.h: */
 #define TYPE_CARVEOUT    0
