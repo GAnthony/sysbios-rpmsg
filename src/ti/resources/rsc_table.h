@@ -141,6 +141,7 @@
 #define TYPE_TRACE       2
 #define TYPE_VDEV  3
 
+typedef unsigned int u32;
 struct fw_rsc_carveout {
 	u32 type;
 	u32 da;
