@@ -265,7 +265,7 @@ Void InterruptM3_isr(UArg arg)
     payload = InterruptM3_intClear();
     if (payload != InterruptM3_INVALIDPAYLOAD) {
         Log_print1(Diags_USER1,
-            "InterruptM3_isr: Interrupt received, payload = 0x%x\n",
+            "InterruptM3_isr: Interrupt received, payload = 0x%x",
             (IArg)payload);
         userFxn(payload);
     }

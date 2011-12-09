@@ -111,10 +111,12 @@ typedef Void (*VirtQueue_callback)(VirtQueue_Handle);
  *
  *  @param[in]  callback  the clients callback function.
  *  @param[in]  procId    Processor ID associated with this VirtQueue.
+ *  @param[in]  arg       Client data associated with this vq.
  *
  *  @Returns    Returns a handle to a new initialized VirtQueue.
  */
-VirtQueue_Handle VirtQueue_create(VirtQueue_callback callback, UInt16 procId);
+VirtQueue_Handle VirtQueue_create(VirtQueue_callback callback, UInt16 procId,
+                                  UArg arg);
 
 
 /*!
@@ -132,8 +134,10 @@ Void VirtQueue_kick(VirtQueue_Handle vq);
  *  @brief       Used at startup-time for initialization
  *
  *  Should be called before any other VirtQueue APIs
+ *
+ *  @param[in]  isHost   True if this processor is acting as a virtio host.
  */
-Void VirtQueue_startup();
+Void VirtQueue_startup(Bool isHost);
 
 
 /*

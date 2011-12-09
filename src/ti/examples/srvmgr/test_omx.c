@@ -226,7 +226,7 @@ Int main(Int argc, char* argv[])
 #endif
 
     /* Plug vring interrupts, and spin until host handshake complete. */
-    VirtQueue_startup();
+    VirtQueue_startup(0);
 
     /*
      * Enable use of runtime Diags_setMask per module:

@@ -92,7 +92,7 @@ typedef struct MessageQCopy_Module {
     HeapBuf_Handle              heap;
 } MessageQCopy_Module;
 
-/* Message Header: Must match mp_msg_hdr in virtio_rp_msg.h on Linux side. */
+/* Message Header: Must match rp_msg_hdr in virtio_rp_msg.h on Linux side. */
 typedef struct MessageQCopy_MsgHeader {
     Bits32 srcAddr;                 /* source endpoint addr               */
     Bits32 dstAddr;                 /* destination endpoint addr          */
@@ -246,9 +246,9 @@ Void MessageQCopy_init(UInt16 remoteProcId)
      * the vrings toHost and fromHost:  toHost is first!
      */
     transport.virtQueue_toHost   = VirtQueue_create(callback_availBufReady,
-                                                    remoteProcId);
+                                                    remoteProcId, NULL);
     transport.virtQueue_fromHost = VirtQueue_create(callback_availBufReady,
-                                                    remoteProcId);
+                                                    remoteProcId, NULL);
 
     /* construct the Swi to process incoming messages: */
     transport.swiHandle = Swi_create(MessageQCopy_swiFxn, NULL, NULL);

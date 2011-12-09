@@ -39,8 +39,6 @@
  *  - BIOS (XDC) types and CamelCasing used;
  *  - virtio_device concept removed (i.e, assumes no containing device);
  *  - simplified scatterlist from Linux version;
- *  - VirtQueue_Objects are created statically here, so just added a VirtQueue_Object_init()
- *    fxn to take the place of the Virtio vring_new_virtqueue() API;
  *  - The notify function is implicit in the implementation, and not provided
  *    by the client, as it is in Linux virtio.
  *
@@ -61,38 +59,30 @@
 #include <xdc/runtime/Diags.h>
 
 #include <ti/sysbios/hal/Hwi.h>
-#include <ti/sysbios/knl/Semaphore.h>
 #include <ti/sysbios/knl/Clock.h>
 #include <ti/sysbios/BIOS.h>
 #include <ti/sysbios/hal/Cache.h>
 
 #include <ti/ipc/rpmsg/InterruptM3.h>
-#include <ti/ipc/rpmsg/VirtQueue.h>
 #include <ti/pm/IpcPower.h>
 
 #include <ti/ipc/MultiProc.h>
 
 #include <string.h>
 
-#include "virtio_ring.h"
+#include <ti/ipc/rpmsg/virtio_ring.h>
+#include <ti/ipc/rpmsg/VirtQueue.h>
+#include <ti/ipc/rpmsg/_VirtQueue.h>
+
+/*
+ * Define APPM3_IS_HOST to enable VirtioTransport test where appM3 is host and
+ * sysM3 is slave.  Otherwise, VirtQueue defaults to Linux/A9 as host, and
+ * appM3 and sysM3 as slaves (where sysM3 routes interrupts to appM3).
+ */
+//#define APPM3_IS_HOST
 
 /* Used for defining the size of the virtqueue registry */
 #define NUM_QUEUES                      5
-
-/* Predefined device addresses */
-#define IPU_MEM_VRING0          0xA0000000
-#define IPU_MEM_VRING1          0xA0004000
-#define IPU_MEM_VRING2          0xA0008000
-#define IPU_MEM_VRING3          0xA000c000
-
-/*
- * Sizes of the virtqueues (expressed in number of buffers supported,
- * and must be power of two)
- */
-#define VQ0_SIZE                256
-#define VQ1_SIZE                256
-#define VQ2_SIZE                256
-#define VQ3_SIZE                256
 
 /*
  * enum - Predefined Mailbox Messages
@@ -130,8 +120,6 @@ enum {
 };
 
 #define DIV_ROUND_UP(n,d)   (((n) + (d) - 1) / (d))
-#define RP_MSG_NUM_BUFS     (VQ0_SIZE) /* must be power of two */
-#define RP_MSG_BUF_SIZE     (512)
 #define RP_MSG_BUFS_SPACE   (RP_MSG_NUM_BUFS * RP_MSG_BUF_SIZE * 2)
 
 #define PAGE_SIZE           (4096)
@@ -154,29 +142,6 @@ enum {
 #define ID_APPM3_TO_A9      2
 #define ID_A9_TO_APPM3      3
 
-typedef struct VirtQueue_Object {
-    /* Id for this VirtQueue_Object */
-    UInt16                  id;
-
-    /* The function to call when buffers are consumed (can be NULL) */
-    VirtQueue_callback      callback;
-
-    /* Shared state */
-    struct vring            vring;
-
-    /* Number of free buffers */
-    UInt16                  num_free;
-
-    /* Last available index; updated by VirtQueue_getAvailBuf */
-    UInt16                  last_avail_idx;
-
-    /* Last available index; updated by VirtQueue_addUsedBuf */
-    UInt16                  last_used_idx;
-
-    /* Will eventually be used to kick remote processor */
-    UInt16                  procId;
-} VirtQueue_Object;
-
 static UInt numQueues = 0;
 static struct VirtQueue_Object *queueRegistry[NUM_QUEUES];
 
@@ -184,6 +149,10 @@ static UInt16 hostProcId;
 static UInt16 dspProcId;
 static UInt16 sysm3ProcId;
 static UInt16 appm3ProcId;
+
+#ifdef APPM3_IS_HOST
+static UInt16 synced = 0;
+#endif
 
 static inline Void * mapPAtoVA(UInt pa)
 {
@@ -220,6 +189,10 @@ Int VirtQueue_addUsedBuf(VirtQueue_Handle vq, Int16 head)
 {
     struct vring_used_elem *used;
 
+    Log_print3(Diags_USER1,
+       "addUsedBuf vq->id: %d head: %d used->idx: %d",
+        vq->id, head, vq->vring.used->idx);
+
     if ((head > vq->vring.num) || (head < 0)) {
         Error_raise(NULL, Error_E_generic, 0, 0);
     }
@@ -244,11 +217,14 @@ Int VirtQueue_addAvailBuf(VirtQueue_Object *vq, Void *buf)
 {
     UInt16 avail;
 
+    Log_print3(Diags_USER1,
+       "addAvailBuf vq->id: %d vq->num_free: %d avail->idx: %d",
+        vq->id, vq->num_free, vq->vring.avail->idx);
+
     if (vq->num_free == 0) {
         /* There's no more space */
         Error_raise(NULL, Error_E_generic, 0, 0);
     }
-
     vq->num_free--;
 
     avail =  vq->vring.avail->idx++ % vq->vring.num;
@@ -267,6 +243,10 @@ Void *VirtQueue_getUsedBuf(VirtQueue_Object *vq)
     UInt16 head;
     Void *buf;
 
+    Log_print3(Diags_USER1,
+       "getUsedBuf vq->id: %d last_used_idx: %d used->idx: %d",
+        vq->id, vq->last_used_idx, vq->vring.used->idx);
+
     /* There's nothing available? */
     if (vq->last_used_idx == vq->vring.used->idx) {
         return (NULL);
@@ -274,6 +254,7 @@ Void *VirtQueue_getUsedBuf(VirtQueue_Object *vq)
 
     head = vq->vring.used->ring[vq->last_used_idx % vq->vring.num].id;
     vq->last_used_idx++;
+    vq->num_free++;
 
     buf = mapPAtoVA(vq->vring.desc[head].addr);
 
@@ -287,28 +268,40 @@ Int16 VirtQueue_getAvailBuf(VirtQueue_Handle vq, Void **buf)
 {
     UInt16 head;
 
-    Log_print6(Diags_USER1, "getAvailBuf vq: 0x%x %d %d %d 0x%x 0x%x\n",
-	(IArg)vq,
-        vq->last_avail_idx, vq->vring.avail->idx, vq->vring.num,
-        (IArg)&vq->vring.avail, (IArg)vq->vring.avail);
+    Log_print5(Diags_USER1,
+       "getAvailBuf vq->id: %d last_avail_idx: %d avail->idx: %d num: %d 0x%x",
+        vq->id, vq->last_avail_idx, vq->vring.avail->idx, vq->vring.num,
+        (IArg)&vq->vring.avail);
 
     /* There's nothing available? */
     if (vq->last_avail_idx == vq->vring.avail->idx) {
-        /* We need to know about added buffers */
-        vq->vring.used->flags &= ~VRING_USED_F_NO_NOTIFY;
-        /* check again after setting flag */
-        if (vq->last_avail_idx == vq->vring.avail->idx)
-            return -1;
+        if (VirtQueue_isHost(vq))  {
+            /* We need to know about added buffers */
+            vq->vring.used->flags &= ~VRING_USED_F_NO_NOTIFY;
+            /* check again after setting flag */
+            if (vq->last_avail_idx == vq->vring.avail->idx)  {
+                return (-1);
+            }
+       }
+       else {
+            return (-1);
+       }
     }
 
-    /* No need to know be kicked about added buffers anymore */
-    vq->vring.used->flags |= VRING_USED_F_NO_NOTIFY;
+    /* No need to be kicked about added buffers anymore */
+    if (VirtQueue_isHost(vq))  {
+        vq->vring.used->flags |= VRING_USED_F_NO_NOTIFY;
+    }
 
     /*
      * Grab the next descriptor number they're advertising, and increment
      * the index we've seen.
      */
+#ifndef APPM3_IS_HOST  /* This line works with Linux rpmsg Host: */
     head = vq->vring.avail->ring[vq->last_avail_idx++ % vq->vring.num];
+#else  /* This line works with both Linux and appM3 as rpmsg Hosts: */
+    head = vq->last_avail_idx++ % vq->vring.num;
+#endif
 
     *buf = mapPAtoVA(vq->vring.desc[head].addr);
 
@@ -334,6 +327,72 @@ Bool VirtQueue_enableCallback(VirtQueue_Object *vq)
     //TODO
     return (FALSE);
 }
+
+#ifdef APPM3_IS_HOST
+/*!
+ * ======== VirtQueue_isr ========
+ * Note 'arg' is ignored: it is the Hwi argument, not the mailbox argument.
+ */
+Void VirtQueue_isr(UArg msg)
+{
+    VirtQueue_Object *vq;
+
+    Log_print1(Diags_USER1, "VirtQueue_isr received msg = 0x%x\n", msg);
+
+    if (MultiProc_self() == sysm3ProcId) {
+        switch(msg) {
+            case (UInt)RP_MSG_MBOX_READY:
+                return;
+
+            case (UInt)RP_MBOX_ECHO_REQUEST:
+                InterruptM3_intSend(appm3ProcId, (UInt)(RP_MBOX_ECHO_REPLY));
+                synced = 1;
+                return;
+
+            case (UInt)RP_MBOX_ABORT_REQUEST:
+                {
+                    Fxn f = (Fxn)0x0;
+                    Log_print0(Diags_USER1, "Crash on demand ...\n");
+                    f();
+                }
+                return;
+
+            case (UInt)RP_MSG_FLUSH_CACHE:
+                Cache_wbAll();
+                return;
+
+            case (UInt)RP_MSG_HIBERNATION:
+                /* Notify Core1 */
+                InterruptM3_intSend(appm3ProcId, (UInt)(RP_MSG_HIBERNATION));
+                IpcPower_suspend();
+                return;
+
+            default:
+                /*
+                 *  If the message isn't one of the above, it's either part of the
+                 *  2-message synchronization sequence or it a virtqueue message
+                 */
+                break;
+        }
+    }
+    else if (msg & 0xFFFF0000) {
+        if (msg == (UInt)RP_MSG_HIBERNATION) {
+            IpcPower_suspend();
+        }
+        if ((MultiProc_self() == appm3ProcId) &&
+             (msg == (UInt)(RP_MBOX_ECHO_REPLY)))  {
+           synced = 1;
+        }
+        return;
+    }
+
+    vq = queueRegistry[msg];
+    if (vq) {
+        vq->callback(vq);
+    }
+}
+
+#else
 
 /*!
  * ======== VirtQueue_isr ========
@@ -387,7 +446,8 @@ Void VirtQueue_isr(UArg msg)
         return;
     }
 
-    if (MultiProc_self() == sysm3ProcId && (msg == ID_A9_TO_APPM3 || msg == ID_APPM3_TO_A9)) {
+    if (MultiProc_self() == sysm3ProcId &&
+            (msg == ID_A9_TO_APPM3 || msg == ID_APPM3_TO_A9)) {
         InterruptM3_intSend(appm3ProcId, (UInt)msg);
     }
     else {
@@ -397,13 +457,13 @@ Void VirtQueue_isr(UArg msg)
         }
     }
 }
-
+#endif
 
 /*!
  * ======== VirtQueue_create ========
  */
 VirtQueue_Object *VirtQueue_create(VirtQueue_callback callback,
-        UInt16 remoteProcId)
+        UInt16 remoteProcId, UArg arg)
 {
     VirtQueue_Object *vq;
     void *vring_phys;
@@ -420,10 +480,15 @@ VirtQueue_Object *VirtQueue_create(VirtQueue_callback callback,
     vq->id = numQueues++;
     vq->procId = remoteProcId;
     vq->last_avail_idx = 0;
+    vq->last_used_idx = 0;
+    vq->num_free = RP_MSG_NUM_BUFS;
+    vq->arg = arg;
 
+#ifndef APPM3_IS_HOST
     if (MultiProc_self() == appm3ProcId) {
         vq->id += 2;
     }
+#endif
 
     switch (vq->id) {
         case ID_SYSM3_TO_A9:
@@ -441,18 +506,10 @@ VirtQueue_Object *VirtQueue_create(VirtQueue_callback callback,
     }
 
     Log_print3(Diags_USER1,
-            "vring: %d 0x%x (0x%x)\n", vq->id, (IArg)vring_phys,
+            "vring: %d 0x%x (0x%x)", vq->id, (IArg)vring_phys,
             RP_MSG_RING_SIZE);
 
     vring_init(&(vq->vring), RP_MSG_NUM_BUFS, vring_phys, RP_MSG_VRING_ALIGN);
-
-    /*
-     *  Don't trigger a mailbox message every time A8 makes another buffer
-     *  available
-     */
-    if (vq->procId == hostProcId || vq->procId == dspProcId) {
-        vq->vring.used->flags |= VRING_USED_F_NO_NOTIFY;
-    }
 
     queueRegistry[vq->id] = vq;
 
@@ -462,7 +519,7 @@ VirtQueue_Object *VirtQueue_create(VirtQueue_callback callback,
 /*!
  * ======== VirtQueue_startup ========
  */
-Void VirtQueue_startup()
+Void VirtQueue_startup(Bool isHost)
 {
     hostProcId      = MultiProc_getId("HOST");
     dspProcId       = MultiProc_getId("DSP");
@@ -472,16 +529,33 @@ Void VirtQueue_startup()
     /* Initilize the IpcPower module */
     IpcPower_init();
 
-    /*
-     *  DSP can be used to prototype communications with CORE0 instead of
-     *  HOST
-     */
-    if (MultiProc_self() == dspProcId) {
+    if (isHost)  {
+       /* Host is responsible for zeroing out vring memory: */
+       memset((void *)IPU_MEM_VRING0, 0,
+                RP_MSG_RING_SIZE * 2 + RP_MSG_BUFS_SPACE);
     }
-    else if (MultiProc_self() == sysm3ProcId)
+
+    if (MultiProc_self() == appm3ProcId) {
         InterruptM3_intRegister(VirtQueue_isr);
-    else if (MultiProc_self() == appm3ProcId)
+    }
+    else if (MultiProc_self() == sysm3ProcId)  {
         InterruptM3_intRegister(VirtQueue_isr);
+    }
+    else if (MultiProc_self() == dspProcId)  {
+        InterruptM3_intRegister(VirtQueue_isr);
+    }
+
+    if (isHost)  {
+       /* Host sends init sequence to sync slave processor (sysM3): */
+       InterruptM3_intSend(sysm3ProcId, (UInt)RP_MSG_MBOX_READY);
+       InterruptM3_intSend(sysm3ProcId, (UInt)RP_MBOX_ECHO_REQUEST);
+    }
+
+#ifdef APPM3_IS_HOST
+    /* Busy wait until host and slaves have synced: */
+    while (!synced);
+#endif
+    Log_print0(Diags_USER1, "Passed VirtQueue_startup\n");
 }
 
 /*!
