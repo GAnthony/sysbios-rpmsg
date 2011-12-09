@@ -31,10 +31,10 @@
 #
 
 # Repo
-REPO		= /usr/local
+REPO            = /db/atree/gp/repo
 
 # Edit Dependency Versions:
-XDCROOTVER	= xdctools_3_22_01_21
+XDCROOTVER      = xdctools_3_22_03_41
 BIOSPRODVER	= bios_6_32_01_38
 IPCPRODVER	= ipc_1_23_01_26
 
@@ -47,7 +47,7 @@ export XDCROOT	= $(XDCDIST_TREE)
 export XDCPATH	= $(BIOSPROD)/packages;$(IPCPROD)/packages;./src;
 
 all:
-	$(XDCROOT)/xdc -k -j $(j) -P `$(XDCROOT)/bin/xdcpkg src/ti |  egrep -v -e "/tests|/apps" | xargs`
+	$(XDCROOT)/xdc -k -j $(j) -P `$(XDCROOT)/bin/xdcpkg src/ti |  egrep -v -e "/apps" | xargs`
 
 clean:
 	$(XDCROOT)/xdc clean -Pr src
