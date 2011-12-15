@@ -175,6 +175,77 @@ static Void *getTxBuf(TransportVirtio_Object *obj, VirtQueue_Object *vq)
 #undef FXNN
 
 
+/*  --------------  TEMP NameService over VirtQueue ----------------------- */
+
+#define RPMSG_NAME_SIZE 32
+
+typedef unsigned int u32;
+
+struct rpmsg_ns_msg {
+    char name[RPMSG_NAME_SIZE]; /* name of service including 0 */
+    u32 addr;                   /* address of the service */
+    u32 flags;                  /* see below */
+} __packed;
+
+
+#define NAMESERVICE_PORT   53
+
+/* Message Header: Must match rp_msg_hdr in virtio_rp_msg.h on Linux side. */
+typedef struct Rpmsg_Hdr {
+    Bits32 srcAddr;                 /* source endpoint addr               */
+    Bits32 dstAddr;                 /* destination endpoint addr          */
+    Bits32 reserved;                /* reserved                           */
+    Bits16 dataLen;                 /* data length                        */
+    Bits16 flags;                   /* bitmask of different flags         */
+    UInt8  payload[];               /* Data payload                       */
+} Rpmsg_Hdr;
+
+typedef Rpmsg_Hdr *Rpmsg;
+
+void sendRpmsg(Char * name, UInt32 port, enum rpmsg_ns_flags flags)
+{
+    struct rpmsg_ns_msg nsMsg;
+    UInt16 dstProc  = MultiProc_getId("HOST");
+    UInt32 dstEndpt = NAMESERVICE_PORT;
+    UInt32 srcEndpt = port;
+    Ptr    data     = &nsMsg;
+    UInt16 len      = sizeof(nsMsg);
+    Int16             token = 0;
+    Rpmsg             msg;
+    IArg              key;
+
+    strncpy(nsMsg.name, name, RPMSG_NAME_SIZE);
+    nsMsg.addr = port;
+    nsMsg.flags = flags;
+
+    if (dstProc != MultiProc_self()) {
+        /* Send to remote processor: */
+        key = GateSwi_enter(gateSwi);  // Protect vring structs.
+        token = VirtQueue_getAvailBuf(vq_host, (Void **)&msg);
+        GateSwi_leave(gateSwi, key);
+
+        if (token >= 0) {
+            /* Copy the payload and set message header: */
+            memcpy(msg->payload, data, len);
+            msg->dataLen = len;
+            msg->dstAddr = dstEndpt;
+            msg->srcAddr = srcEndpt;
+            msg->flags = 0;
+            msg->reserved = 0;
+
+            key = GateSwi_enter(gateSwi);  // Protect vring structs.
+            VirtQueue_addUsedBuf(vq_host, token);
+            VirtQueue_kick(vq_host);
+            GateSwi_leave(gateSwi, key);
+        }
+        else {
+            System_abort("sendRpmsg: getAvailBuf failed!");
+        }
+    }
+}
+
+
+
 /*
  *************************************************************************
  *                       Instance functions
@@ -349,7 +420,11 @@ Bool TransportVirtio_put(TransportVirtio_Object *obj, Ptr msg)
         /* Copy the payload and set message header: */
         memcpy(rp_msg->payload, (Ptr)msg, msgSize);
         rp_msg->dataLen  = msgSize;
-        rp_msg->dstAddr  = 1024;       // TBD: Hardcoded rply addr..
+#ifdef BIND_IMPLEMENTED
+        rp_msg->dstAddr  = (((MessageQ_Msg)msg)->dstId & 0x0000FFFF);
+#else
+        rp_msg->dstAddr  = 1024;  // Matches first rpmsg created on Linux
+#endif
         rp_msg->srcAddr  = RPMSG_MESSAGEQ_PORT;
         rp_msg->flags    = 0;
         rp_msg->reserved = 0;
@@ -424,6 +499,7 @@ Void TransportVirtio_swiFxn(UArg arg0, UArg arg1)
     UInt              msgSize;
     TransportVirtio_Object      *obj;
     Bool              buf_avail = FALSE;
+    struct rpmsg_ns_msg *nsMsg;
 
     Log_print0(Diags_ENTRY, "--> "FXNN);
 
@@ -444,6 +520,16 @@ Void TransportVirtio_swiFxn(UArg arg0, UArg arg1)
                    "to: %d, dataLen: %d",
                   (IArg)rp_msg, (IArg)rp_msg->srcAddr, (IArg)rp_msg->dstAddr,
                   (IArg)rp_msg->dataLen);
+
+	/* We can't handle yet an rpmsg other than for MessageQ service: */
+	if (rp_msg->dstAddr != RPMSG_MESSAGEQ_PORT) {
+		if (rp_msg->dstAddr == NAMESERVICE_PORT) {
+		    nsMsg = (struct rpmsg_ns_msg *)rp_msg->payload;
+		    Log_print2(Diags_INFO, FXNN": announcement from %d: %s\n",
+			nsMsg->addr, (IArg)nsMsg->name);
+		}
+		goto skip;
+	}
 
         /* Convert RpMsg_Msg payload into a MessageQ_Msg: */
         msg = (MessageQ_Msg)rp_msg->payload;
@@ -468,6 +554,7 @@ Void TransportVirtio_swiFxn(UArg arg0, UArg arg1)
         /* Pass to desitination queue: */
         MessageQ_put(queueId, buf);
 
+skip:
         if (obj->isHost)  {
             VirtQueue_addAvailBuf(obj->vq_host, rp_msg);
         }
@@ -501,75 +588,4 @@ Void TransportVirtio_setErrFxn(TransportVirtio_ErrFxn errFxn)
 {
     /* Ignore the errFxn */
 }
-
-
-/*  --------------  TEMP NameService over VirtQueue ----------------------- */
-
-#define RPMSG_NAME_SIZE 32
-
-typedef unsigned int u32;
-
-struct rpmsg_ns_msg {
-    char name[RPMSG_NAME_SIZE]; /* name of service including 0 */
-    u32 addr;                   /* address of the service */
-    u32 flags;                  /* see below */
-} __packed;
-
-
-#define NAMESERVICE_PORT   53
-
-/* Message Header: Must match rp_msg_hdr in virtio_rp_msg.h on Linux side. */
-typedef struct Rpmsg_Hdr {
-    Bits32 srcAddr;                 /* source endpoint addr               */
-    Bits32 dstAddr;                 /* destination endpoint addr          */
-    Bits32 reserved;                /* reserved                           */
-    Bits16 dataLen;                 /* data length                        */
-    Bits16 flags;                   /* bitmask of different flags         */
-    UInt8  payload[];               /* Data payload                       */
-} Rpmsg_Hdr;
-
-typedef Rpmsg_Hdr *Rpmsg;
-
-void sendRpmsg(Char * name, UInt32 port, enum rpmsg_ns_flags flags)
-{
-    struct rpmsg_ns_msg nsMsg;
-    UInt16 dstProc  = MultiProc_getId("HOST");
-    UInt32 dstEndpt = NAMESERVICE_PORT;
-    UInt32 srcEndpt = port;
-    Ptr    data     = &nsMsg;
-    UInt16 len      = sizeof(nsMsg);
-    Int16             token = 0;
-    Rpmsg             msg;
-    IArg              key;
-
-    strncpy(nsMsg.name, name, RPMSG_NAME_SIZE);
-    nsMsg.addr = port;
-    nsMsg.flags = flags;
-
-    if (dstProc != MultiProc_self()) {
-        /* Send to remote processor: */
-        key = GateSwi_enter(gateSwi);  // Protect vring structs.
-        token = VirtQueue_getAvailBuf(vq_host, (Void **)&msg);
-        GateSwi_leave(gateSwi, key);
-
-        if (token >= 0) {
-            /* Copy the payload and set message header: */
-            memcpy(msg->payload, data, len);
-            msg->dataLen = len;
-            msg->dstAddr = dstEndpt;
-            msg->srcAddr = srcEndpt;
-            msg->flags = 0;
-            msg->reserved = 0;
-
-            key = GateSwi_enter(gateSwi);  // Protect vring structs.
-            VirtQueue_addUsedBuf(vq_host, token);
-            VirtQueue_kick(vq_host);
-            GateSwi_leave(gateSwi, key);
-        }
-        else {
-            System_abort("sendRpmsg: getAvailBuf failed!");
-        }
-    }
-}
-
 

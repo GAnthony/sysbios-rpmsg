@@ -86,7 +86,6 @@ var Registry = xdc.useModule('xdc.runtime.Registry');
 Registry.common$.diags_ENTRY = Diags.RUNTIME_ON;
 Registry.common$.diags_EXIT  = Diags.RUNTIME_ON;
 Registry.common$.diags_INFO  = Diags.RUNTIME_ON;
-Registry.common$.diags_LIFECYCLE = Diags.RUNTIME_ON;
 Registry.common$.diags_STATUS = Diags.RUNTIME_ON;
 Registry.common$.diags_USER1 = Diags.RUNTIME_ON;
 Diags.setMaskEnabled = true;
@@ -97,7 +96,6 @@ var TransportVirtio = xdc.useModule('ti.ipc.transports.TransportVirtio');
 TransportVirtio.common$.diags_ENTRY = Diags.RUNTIME_ON;
 TransportVirtio.common$.diags_EXIT  = Diags.RUNTIME_ON;
 TransportVirtio.common$.diags_INFO  = Diags.RUNTIME_ON;
-TransportVirtio.common$.diags_LIFECYCLE = Diags.RUNTIME_ON;
 TransportVirtio.common$.diags_STATUS = Diags.RUNTIME_ON;
 
 var Main = xdc.useModule('xdc.runtime.Main');

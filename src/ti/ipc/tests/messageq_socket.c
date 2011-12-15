@@ -35,7 +35,7 @@
  *  Test for messageq over sockets.
  *
  *  Requires:
- *      tools/messageq_test in rpmsg_3.2_rc1_sock branch of upstream rpmsg.
+ *      tools/messageq_socket in rpmsg_3.2_rc4 branch of upstream-rpmsg.
  *
  */
 
@@ -131,12 +131,9 @@ Void tsk1_func(UArg arg0, UArg arg1)
         System_abort("MessageQ_create failed\n" );
     }
 
-    /* No NameServer yet, so assume QueueIndex is same on both M3's: */
     remoteQueueId = MessageQ_getQueueId(messageQ);
     System_printf("tsk1_func: created messageQ: QueueID: 0x%x\n",
             MessageQ_getQueueId(messageQ));
-    /* Force procId to be the destination: */
-    remoteQueueId = (remoteQueueId & 0x0000FFFF) | (procId << 16);
 
 #if 0   // TBD: Need to implement NameServer.
     /* Open the remote message queue. Spin until it is ready. */
@@ -146,6 +143,12 @@ Void tsk1_func(UArg arg0, UArg arg1)
     while (status != MessageQ_S_SUCCESS);
 
     System_printf("tsk1_func: opened remote messageQ.\n");
+#else
+    /* No NameServer yet, so assume QueueIndex is same on both M3's: */
+    /* Force procId to be the destination: */
+    remoteQueueId = (remoteQueueId & 0x0000FFFF) | (procId << 16);
+    System_printf("tsk1_func: remoteQueueId: 0x%x\n",
+            remoteQueueId);
 #endif
 
     System_printf("Start the main loop\n");
