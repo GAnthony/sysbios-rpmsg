@@ -420,11 +420,7 @@ Bool TransportVirtio_put(TransportVirtio_Object *obj, Ptr msg)
         /* Copy the payload and set message header: */
         memcpy(rp_msg->payload, (Ptr)msg, msgSize);
         rp_msg->dataLen  = msgSize;
-#ifdef BIND_IMPLEMENTED
         rp_msg->dstAddr  = (((MessageQ_Msg)msg)->dstId & 0x0000FFFF);
-#else
-        rp_msg->dstAddr  = 1024;  // Matches first rpmsg created on Linux
-#endif
         rp_msg->srcAddr  = RPMSG_MESSAGEQ_PORT;
         rp_msg->flags    = 0;
         rp_msg->reserved = 0;
