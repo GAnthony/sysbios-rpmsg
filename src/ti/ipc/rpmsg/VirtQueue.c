@@ -161,7 +161,7 @@ static inline Void * mapPAtoVA(UInt pa)
 
 static inline UInt mapVAtoPA(Void * va)
 {
-    return ((UInt)va & 0x000fffffU) | 0xa9800000U;
+    return ((UInt)va & 0x000fffffU) | 0xa9000000U;
 }
 
 /*!
