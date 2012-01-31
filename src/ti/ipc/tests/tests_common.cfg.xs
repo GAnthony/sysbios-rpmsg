@@ -52,9 +52,14 @@ var List      = xdc.useModule('ti.sdo.utils.List');
 var GateSwi   = xdc.useModule('ti.sysbios.gates.GateSwi');
 var Task      = xdc.useModule('ti.sysbios.knl.Task');
 Task.deleteTerminatedTasks = true;
+
 var MessageQ  = xdc.useModule('ti.sdo.ipc.MessageQ');
 MessageQ.traceFlag = true;
 MessageQ.SetupTransportProxy = xdc.module('ti.ipc.transports.TransportVirtioSetup');
+
+NameServer    = xdc.useModule("ti.sdo.utils.NameServer");
+var nsRemote = xdc.useModule("ti.ipc.namesrv.NameServerRemoteRpmsg");
+NameServer.SetupProxy = nsRemote;
 
 xdc.loadPackage('ti.ipc.rpmsg');
 
@@ -77,31 +82,37 @@ var LoggerSys = xdc.useModule('xdc.runtime.LoggerSys');
 var LoggerSysParams = new LoggerSys.Params();
 
 /* Enable Logger: */
-//Defaults.common$.logger = LoggerSys.create(LoggerSysParams);
+Defaults.common$.logger = LoggerSys.create(LoggerSysParams);
+
+nsRemote.common$.diags_ENTRY = Diags.ALWAYS_ON;
+nsRemote.common$.diags_INFO  = Diags.ALWAYS_ON;
+nsRemote.common$.diags_EXIT  = Diags.ALWAYS_ON;
 
 /* Enable runtime Diags_setMask() for non-XDC spec'd modules: */
 var Text = xdc.useModule('xdc.runtime.Text');
 Text.isLoaded = true;
 var Registry = xdc.useModule('xdc.runtime.Registry');
-Registry.common$.diags_ENTRY = Diags.RUNTIME_ON;
-Registry.common$.diags_EXIT  = Diags.RUNTIME_ON;
-Registry.common$.diags_INFO  = Diags.RUNTIME_ON;
-Registry.common$.diags_STATUS = Diags.RUNTIME_ON;
-Registry.common$.diags_USER1 = Diags.RUNTIME_ON;
+Registry.common$.diags_ENTRY = Diags.RUNTIME_OFF;
+Registry.common$.diags_EXIT  = Diags.RUNTIME_OFF;
+Registry.common$.diags_INFO  = Diags.RUNTIME_OFF;
+Registry.common$.diags_STATUS = Diags.RUNTIME_OFF;
+Registry.common$.diags_USER1 = Diags.RUNTIME_OFF;
 Diags.setMaskEnabled = true;
 
-MessageQ.common$.diags_USER1= Diags.ALWAYS_ON;
+MessageQ.common$.diags_USER1= Diags.ALWAYS_OFF;
 
 var TransportVirtio = xdc.useModule('ti.ipc.transports.TransportVirtio');
-TransportVirtio.common$.diags_ENTRY = Diags.RUNTIME_ON;
-TransportVirtio.common$.diags_EXIT  = Diags.RUNTIME_ON;
-TransportVirtio.common$.diags_INFO  = Diags.RUNTIME_ON;
-TransportVirtio.common$.diags_STATUS = Diags.RUNTIME_ON;
+/*
+TransportVirtio.common$.diags_ENTRY = Diags.ALWAYS_ON;
+TransportVirtio.common$.diags_EXIT  = Diags.ALWAYS_ON;
+TransportVirtio.common$.diags_INFO  = Diags.ALWAYS_ON;
+TransportVirtio.common$.diags_STATUS = Diags.ALWAYS_ON;
+*/
 
 var Main = xdc.useModule('xdc.runtime.Main');
 Main.common$.diags_ASSERT = Diags.ALWAYS_ON;
-Main.common$.diags_INTERNAL = Diags.ALWAYS_ON;
-Main.common$.diags_USER1 = Diags.ALWAYS_ON;
+Main.common$.diags_INTERNAL = Diags.ALWAYS_OFF;
+Main.common$.diags_USER1 = Diags.ALWAYS_OFF;
 
 var Hwi = xdc.useModule('ti.sysbios.family.arm.m3.Hwi');
 Hwi.enableException = true;
@@ -109,8 +120,8 @@ Hwi.enableException = true;
 /*
  *  Common constants:
  */
-Program.global.CORE0_MESSAGEQNAME = "CORE0";
-Program.global.CORE1_MESSAGEQNAME = "CORE1";
+Program.global.SLAVE_MESSAGEQNAME = "SLAVE";
+Program.global.HOST_MESSAGEQNAME = "HOST";
 Program.global.HEAP_NAME    = "myHeap";
 Program.global.HEAP_ALIGN   =     8;
 Program.global.HEAP_MSGSIZE =    64;

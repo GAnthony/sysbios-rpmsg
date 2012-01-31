@@ -105,7 +105,7 @@ Void tsk1_func(UArg arg0, UArg arg1)
     myIpcStart();
 
     /* Create a message queue. Using SyncSem as the synchronizer */
-    messageQ = MessageQ_create(CORE1_MESSAGEQNAME, NULL);
+    messageQ = MessageQ_create(SLAVE_MESSAGEQNAME, NULL);
     if (messageQ == NULL) {
         System_abort("MessageQ_create failed\n" );
     }
@@ -121,7 +121,7 @@ Void tsk1_func(UArg arg0, UArg arg1)
 #if 0
     /* Open the remote message queue. Spin until it is ready. */
     do {
-        status = MessageQ_open(CORE0_MESSAGEQNAME, &remoteQueueId);
+        status = MessageQ_open(HOST_MESSAGEQNAME, &remoteQueueId);
     }
     while (status != MessageQ_S_SUCCESS);
 

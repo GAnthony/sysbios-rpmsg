@@ -51,6 +51,7 @@
 #include <xdc/runtime/Diags.h>
 
 /*  ----------------------------------- IPC module Headers           */
+#include <ti/sdo/utils/_NameServer.h>
 #include <ti/ipc/MessageQ.h>
 #include <ti/ipc/MultiProc.h>
 #include <ti/ipc/transports/TransportVirtioSetup.h>
@@ -75,8 +76,8 @@ void myNameMap_register(Char * name, UInt32 port)
 }
 
 /*
- * TBD: This to get the TransportVirtio_attach() called in lieu of "correct"
- * way to hook in to BIOS Ipc_start().
+ * This to get TransportVirtio_attach() and NameServerRemoteRpmsg_attach()
+ * called in lieu of using Ipc_start().
  * Must be done after BIOS_start(), as TransportVirtio startup relies on
  * passing an interrupt handshake.
  */
@@ -84,9 +85,12 @@ void myIpcStart(UInt procId)
 {
     Int     status;
 
-    /* call TransportCircSetup to attach to remote processor */
+    /* call TransportVirtioSetup to attach to remote processor */
     status = TransportVirtioSetup_attach(procId, 0);
+    Assert_isTrue(status >= 0, NULL);
 
+    /* call NameServer_attach to remote processor */
+    status = ti_sdo_utils_NameServer_SetupProxy_attach(procId, 0);
     Assert_isTrue(status >= 0, NULL);
 
     /*
@@ -126,23 +130,25 @@ Void tsk1_func(UArg arg0, UArg arg1)
     myIpcStart(procId);
 
     /* Create a message queue. Using SyncSem as the synchronizer */
-    messageQ = MessageQ_create(CORE0_MESSAGEQNAME, NULL);
+    messageQ = MessageQ_create(SLAVE_MESSAGEQNAME, NULL);
     if (messageQ == NULL) {
         System_abort("MessageQ_create failed\n" );
     }
 
     remoteQueueId = MessageQ_getQueueId(messageQ);
-    System_printf("tsk1_func: created messageQ: QueueID: 0x%x\n",
-            MessageQ_getQueueId(messageQ));
+    System_printf("tsk1_func: created MessageQ: %s; QueueID: 0x%x\n",
+	SLAVE_MESSAGEQNAME, MessageQ_getQueueId(messageQ));
 
-#if 0   // TBD: Need to implement NameServer.
+#if 1   // TBD: Need to implement NameServer.
     /* Open the remote message queue. Spin until it is ready. */
     do {
-        status = MessageQ_open(CORE1_MESSAGEQNAME, &remoteQueueId);
+        System_printf("tsk1_func: Calling MessageQ_open...\n");
+        status = MessageQ_open(HOST_MESSAGEQNAME, &remoteQueueId);
     }
     while (status != MessageQ_S_SUCCESS);
 
-    System_printf("tsk1_func: opened remote messageQ.\n");
+    System_printf("tsk1_func: Remote MessageQ %s; QueueID: 0x%x\n",
+	HOST_MESSAGEQNAME, remoteQueueId);
 #else
     /* No NameServer yet, so assume QueueIndex is same on both M3's: */
     /* Force procId to be the destination: */
