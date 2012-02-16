@@ -34,6 +34,7 @@
  */
 
 import ti.sysbios.knl.Swi;
+import ti.sysbios.gates.GateSwi;
 
 /*!
  *  ======== TransportVirtio ========
@@ -60,12 +61,25 @@ instance:
      */
     config Ptr sharedAddr = null;
 
+    /*!
+     *  ======== intVectorId ========
+     *  Interrupt vector ID to be used by the driver.
+     *
+     *  This parameter is only used by C64x+ targets
+     */
+    config UInt intVectorId = ~1u;
+
 internal:
 
     /*!
      *  ======== swiFxn ========
      */
     Void swiFxn(UArg arg0, UArg arg1);
+
+    struct Module_State 
+    {
+        GateSwi.Handle gateSwiHandle;
+    }
 
     /*! Instance state structure */
     struct Instance_State {

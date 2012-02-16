@@ -1,5 +1,5 @@
-/* --COPYRIGHT--,BSD
- * Copyright (c) $(CPYYEAR), Texas Instruments Incorporated
+/* 
+ * Copyright (c) 2011, Texas Instruments Incorporated
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -28,66 +28,49 @@
  * WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR
  * OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE,
  * EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
- * --/COPYRIGHT--*/
+ * 
+ */
 /*
- *  ======== package.xs ========
- *
+ *  ======== InterruptM3.xs ========
  */
 
+var Hwi         = null;
+var InterruptM3 = null;
+var Core        = null;
+var MultiProc   = null;
 
 /*
- *  ======== Package.getLibs ========
- *  This function is called when a program's configuration files are
- *  being generated and it returns the name of a library appropriate
- *  for the program's configuration.
+ *  ======== module$use ========
  */
+function module$use()
+{   
+    InterruptM3     = this;
 
-function getLibs(prog)
-{
-    var suffix;
+    Hwi         = xdc.useModule("ti.sysbios.family.arm.m3.Hwi");
+    Core        = xdc.useModule("ti.sysbios.family.arm.ducati.Core");
+    MultiProc   = xdc.useModule("ti.sdo.utils.MultiProc");
 
-    /* find a compatible suffix */
-    if ("findSuffix" in prog.build.target) {
-	suffix = prog.build.target.findSuffix(this);
-    }
-    else {
-	suffix = prog.build.target.suffix;
-    }
-
-    var name = this.$name + ".a" + suffix;
-    var lib = "";
-
-    lib = "lib/" + this.profile + "/" + name;
-    if (java.io.File(this.packageBase + lib).exists()) {
-        return lib;
-    }
-
-    /* all ti.targets return whole_program_debug library by default */
-    if (prog.build.target.$name.match(/^ti\.targets\./)) {
-        lib = "lib/" + "whole_program_debug/" + name;
-        if (java.io.File(this.packageBase + lib).exists()) {
-            return lib;
-        }
-    }
-
-    /* all other targets, return release library by default */
-    else {
-        lib = "lib/" + "release/" + name;
-        if (java.io.File(this.packageBase + lib).exists()) {
-            return lib;
-        }
-    }
-
-    /* could not find any library, throw exception */
-    throw Error("Library not found: " + name);
+    this.hostProcId   = MultiProc.getIdMeta("HOST");
+    this.sysm3ProcId  = MultiProc.getIdMeta("CORE0");
+    this.appm3ProcId  = MultiProc.getIdMeta("CORE1");
+    this.dspProcId    = MultiProc.getIdMeta("DSP");
 }
 
 /*
- *  ======== package.close ========
+ *  ======== module$static$init ========
  */
-function close()
+function module$static$init(mod, params)
 {
-    if (xdc.om.$name != 'cfg') {
-        return;
+    var fxnTable = InterruptM3.$object.fxnTable;
+    var MultiProc = xdc.module('ti.sdo.utils.MultiProc');
+    
+    /* The function table length should be the number of processors */
+    fxnTable.length = MultiProc.numProcessors;
+    for (var i = 0; i < fxnTable.length; i++) {
+        fxnTable[i].func = null;
+        fxnTable[i].arg = 0;
     }
+
+    mod.numPlugged = 0;
 }
+

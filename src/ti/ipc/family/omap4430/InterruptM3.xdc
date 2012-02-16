@@ -1,5 +1,5 @@
-/* --COPYRIGHT--,BSD
- * Copyright (c) $(CPYYEAR), Texas Instruments Incorporated
+/* 
+ * Copyright (c) 2011, Texas Instruments Incorporated
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -28,66 +28,45 @@
  * WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR
  * OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE,
  * EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
- * --/COPYRIGHT--*/
+ * 
+ */
 /*
- *  ======== package.xs ========
- *
+ *  ======== InterruptM3.xdc ========
  */
 
+import ti.sdo.utils.MultiProc;
 
-/*
- *  ======== Package.getLibs ========
- *  This function is called when a program's configuration files are
- *  being generated and it returns the name of a library appropriate
- *  for the program's configuration.
+/*!
+ *  ======== InterruptM3 ======== 
+ *  OMAP4430/Ducati IPC interrupt manager
  */
 
-function getLibs(prog)
+module InterruptM3 inherits ti.sdo.ipc.notifyDrivers.IInterrupt
 {
-    var suffix;
 
-    /* find a compatible suffix */
-    if ("findSuffix" in prog.build.target) {
-	suffix = prog.build.target.findSuffix(this);
+internal:
+
+    /*! Function table */
+    struct FxnTable {
+        Fxn    func;
+        UArg   arg;
     }
-    else {
-	suffix = prog.build.target.suffix;
-    }
+    
+    /*!
+     *  ======== intShmStub ========
+     *  Stub function plugged as interrupt handler
+     */
+    Void intShmStub(UArg arg);
 
-    var name = this.$name + ".a" + suffix;
-    var lib = "";
+    struct Module_State {
+        FxnTable   fxnTable[];  /* One entry for each core */
+        UInt       numPlugged;  /* # of times the interrupt was registered */
+    };
 
-    lib = "lib/" + this.profile + "/" + name;
-    if (java.io.File(this.packageBase + lib).exists()) {
-        return lib;
-    }
-
-    /* all ti.targets return whole_program_debug library by default */
-    if (prog.build.target.$name.match(/^ti\.targets\./)) {
-        lib = "lib/" + "whole_program_debug/" + name;
-        if (java.io.File(this.packageBase + lib).exists()) {
-            return lib;
-        }
-    }
-
-    /* all other targets, return release library by default */
-    else {
-        lib = "lib/" + "release/" + name;
-        if (java.io.File(this.packageBase + lib).exists()) {
-            return lib;
-        }
-    }
-
-    /* could not find any library, throw exception */
-    throw Error("Library not found: " + name);
+    /*! Statically retrieve procIds to avoid doing this at runtime */
+    config UInt hostProcId  = MultiProc.INVALIDID;
+    config UInt sysm3ProcId = MultiProc.INVALIDID;
+    config UInt appm3ProcId = MultiProc.INVALIDID;
+    config UInt dspProcId   = MultiProc.INVALIDID;
 }
 
-/*
- *  ======== package.close ========
- */
-function close()
-{
-    if (xdc.om.$name != 'cfg') {
-        return;
-    }
-}

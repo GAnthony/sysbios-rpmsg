@@ -83,16 +83,15 @@
 #include <ti/sysbios/knl/Swi.h>
 #include <ti/sysbios/gates/GateSwi.h>
 
+#include "_TransportVirtio.h"
 #include "package/internal/TransportVirtio.xdc.h"
 
 #include <ti/sdo/utils/_MultiProc.h>
 #include <ti/sdo/ipc/_MessageQ.h>
 
 #include <ti/ipc/rpmsg/virtio_ring.h>
-#include <ti/ipc/rpmsg/VirtQueue.h>
-#include <ti/ipc/rpmsg/_VirtQueue.h>
-
-#include <ti/ipc/transports/_TransportVirtio.h>
+/* TBD: VirtQueue.h needs to live in a common directory, not family specific.*/
+#include <ti/ipc/family/omap4430/VirtQueue.h>
 
 /* TBD: until NameMap built over a new rpmsg API: */
 static VirtQueue_Handle vq_host;
@@ -110,21 +109,20 @@ typedef struct RpMsg_Header {
 typedef RpMsg_Header *RpMsg_Msg;
 
 /* Maximum RPMSG payload: */
-#define MAX_PAYLOAD (RP_MSG_BUF_SIZE - sizeof(RpMsg_Header))
+#define MAX_PAYLOAD (VirtQueue_RP_MSG_BUF_SIZE - sizeof(RpMsg_Header))
 
 /* That special per processor RPMSG channel reserved to multiplex MessageQ */
 #define RPMSG_MESSAGEQ_PORT         61
 
-static GateSwi_Handle gateSwi;
 
 #define FXNN "callback_usedBufReady"
 static Void callback_usedBufReady(VirtQueue_Handle vq)
 {
     Log_print2(Diags_INFO, FXNN": vq %d kicked; VirtQueue_isHost: 0x%x",
-            vq->id, VirtQueue_isHost(vq));
+            VirtQueue_getId(vq), VirtQueue_isHost(vq));
     if (VirtQueue_isHost(vq))  {
         /* Post a SWI to process all incoming messages */
-        Swi_post((Swi_Handle)vq->arg);
+        Swi_post(VirtQueue_getSwiHandle(vq));
     }
     else {
         /* Note: We post nothing for vq_slave. */
@@ -138,10 +136,10 @@ static Void callback_usedBufReady(VirtQueue_Handle vq)
 static Void callback_availBufReady(VirtQueue_Handle vq)
 {
     Log_print2(Diags_INFO, FXNN": vq %d kicked; VirtQueue_isSlave: 0x%x",
-            vq->id, VirtQueue_isSlave(vq));
+            VirtQueue_getId(vq), VirtQueue_isSlave(vq));
     if (VirtQueue_isSlave(vq))  {
         /* Post a SWI to process all incoming messages */
-        Swi_post((Swi_Handle)vq->arg);
+        Swi_post(VirtQueue_getSwiHandle(vq));
     }
     else {
        /* Note: We post nothing for vq_host, as we assume the
@@ -154,7 +152,7 @@ static Void callback_availBufReady(VirtQueue_Handle vq)
 
 /* Allocate a buffer for sending: */
 #define FXNN "getTxBuf"
-static Void *getTxBuf(TransportVirtio_Object *obj, VirtQueue_Object *vq)
+static Void *getTxBuf(TransportVirtio_Object *obj, VirtQueue_Handle vq)
 {
         Void     *buf;
 
@@ -162,9 +160,9 @@ static Void *getTxBuf(TransportVirtio_Object *obj, VirtQueue_Object *vq)
          * either pick the next unused tx buffer
          * (half of our buffers are used for sending messages)
          */
-        if (obj->last_sbuf < RP_MSG_NUM_BUFS)  {
+        if (obj->last_sbuf < VirtQueue_RP_MSG_NUM_BUFS)  {
            Log_print1(Diags_INFO, FXNN": last_sbuf: %d", obj->last_sbuf);
-           buf = (Char *)obj->sbufs + RP_MSG_BUF_SIZE * obj->last_sbuf++;
+           buf = (Char *)obj->sbufs + VirtQueue_RP_MSG_BUF_SIZE * obj->last_sbuf++;
         }
         else {
            /* or recycle a used one */
@@ -220,9 +218,10 @@ void sendRpmsg(Char * name, UInt32 port, enum rpmsg_ns_flags flags)
 
     if (dstProc != MultiProc_self()) {
         /* Send to remote processor: */
-        key = GateSwi_enter(gateSwi);  // Protect vring structs.
+	/* Protect vring structs. */
+        key = GateSwi_enter(TransportVirtio_module->gateSwiHandle);  
         token = VirtQueue_getAvailBuf(vq_host, (Void **)&msg);
-        GateSwi_leave(gateSwi, key);
+        GateSwi_leave(TransportVirtio_module->gateSwiHandle, key);
 
         if (token >= 0) {
             /* Copy the payload and set message header: */
@@ -233,10 +232,10 @@ void sendRpmsg(Char * name, UInt32 port, enum rpmsg_ns_flags flags)
             msg->flags = 0;
             msg->reserved = 0;
 
-            key = GateSwi_enter(gateSwi);  // Protect vring structs.
+            key = GateSwi_enter(TransportVirtio_module->gateSwiHandle);
             VirtQueue_addUsedBuf(vq_host, token);
             VirtQueue_kick(vq_host);
-            GateSwi_leave(gateSwi, key);
+            GateSwi_leave(TransportVirtio_module->gateSwiHandle, key);
         }
         else {
             System_abort("sendRpmsg: getAvailBuf failed!");
@@ -266,21 +265,33 @@ Int TransportVirtio_Instance_init(TransportVirtio_Object *obj,
     Swi_Params  swiParams;
     GateSwi_Params gatePrms;
     Int         i;
-    Ptr         buf_addr = (Ptr)IPU_MEM_VRING0;
-    VirtQueue_callback callback;
+    Ptr         buf_addr = (Ptr)VirtQueue_IPU_MEM_VRING0;
+    VirtQueue_Params vqParams;
 
     /* set object fields */
     obj->priority     = params->priority;
     obj->remoteProcId = remoteProcId;
 
-    /*
-     *  From the remoteProcId, we must determine if this Virtio Transport is
-     *  acting as host or a slave.
-     *  Here, we have this hardcoded, but ideally there needs to be some
-     *  nice XDC config way to create the pairwise host/slave IPC table.
+   /* From the remoteProcId, we must determine if this Virtio Transport is
+    * acting as host or a slave.
+    */
+#if 0
+    /* Linux side currently assumes HOST is lowest ID core in the system:
      */
+    if ((MultiProc_self() == MultiProc_getId("HOST")) ||
+         ((remoteProcId != MultiProc_getId("HOST")) &&
+          (MultiProc_self() < remoteProcId)))
+    {
+      /* This processor is Host in pair if it's own ID is the "HOST" id according
+        * to the MultiProc names or if the remote processor is not the host and
+        * the remote processor has an ID greater than its own ID */
+      obj->isHost = TRUE;
+    }
+#else
+    /* Hardcoded below until constraint mentioned above is lifted: */
     obj->isHost = (MultiProc_self() == MultiProc_getId("CORE1")) ||
                   (MultiProc_self() == MultiProc_getId("HOST"));
+#endif
 
     Log_print2(Diags_INFO, FXNN": remoteProc: %d, isHost: %d",
                   obj->remoteProcId, obj->isHost);
@@ -296,30 +307,30 @@ Int TransportVirtio_Instance_init(TransportVirtio_Object *obj,
 
     /* Construct a GateSwi to protect our vrings: */
     GateSwi_Params_init(&gatePrms);
-
-
-    gateSwi = GateSwi_create(&gatePrms, NULL);
+    TransportVirtio_module->gateSwiHandle = GateSwi_create(&gatePrms, NULL);
 
     /*
      * Plug Vring Interrupts...
      */
-    VirtQueue_startup(obj->isHost);
+    VirtQueue_startup(obj->remoteProcId, obj->isHost);
 
     /*
      * Create a pair VirtQueues (one for sending, one for receiving).
      * Note: First one gets an even, second gets odd vq ID.
      */
+    VirtQueue_Params_init(&vqParams);
+    vqParams.host = obj->isHost;
+    vqParams.swiHandle = swiHandle;
+    vqParams.intVectorId = params->intVectorId;
     if (obj->isHost)  {
-        callback = callback_usedBufReady;
+      vqParams.callback = (Fxn) callback_usedBufReady;
     }
     else {
-        callback = callback_availBufReady;
+      vqParams.callback = (Fxn) callback_availBufReady;
     }
 
-    vq_host = obj->vq_host   = (Ptr)VirtQueue_create(callback, remoteProcId,
-                                (UArg)swiHandle);
-    obj->vq_slave  = (Ptr)VirtQueue_create(callback, remoteProcId,
-                                (UArg)swiHandle);
+    vq_host = obj->vq_host = (Ptr)VirtQueue_create(remoteProcId, &vqParams, eb);
+    obj->vq_slave  = (Ptr)VirtQueue_create(remoteProcId, &vqParams, eb);
 
     /* Register the transport with MessageQ */
     flag = ti_sdo_ipc_MessageQ_registerTransport(
@@ -327,13 +338,13 @@ Int TransportVirtio_Instance_init(TransportVirtio_Object *obj,
 
     if (obj->isHost)  {
        /* Initialize fields used by getTxBuf(): */
-	obj->sbufs = (Char *)buf_addr + RP_MSG_NUM_BUFS * RP_MSG_BUF_SIZE;
+    	obj->sbufs = (Char *)buf_addr + VirtQueue_RP_MSG_NUM_BUFS * VirtQueue_RP_MSG_BUF_SIZE;
 	obj->last_sbuf = 0;
 
        /* Host needs to prime his vq with some buffers for receiving: */
-       for (i = 0; i < RP_MSG_NUM_BUFS; i++) {
+       for (i = 0; i < VirtQueue_RP_MSG_NUM_BUFS; i++) {
             VirtQueue_addAvailBuf(obj->vq_host,
-                                  ((Char *)buf_addr + i * RP_MSG_BUF_SIZE));
+                                  ((Char *)buf_addr + i * VirtQueue_RP_MSG_BUF_SIZE));
        }
        VirtQueue_kick(obj->vq_host);
     }
@@ -356,6 +367,22 @@ Void TransportVirtio_Instance_finalize(TransportVirtio_Object *obj, Int status)
 
     Log_print0(Diags_ENTRY, "--> "FXNN);
 
+    /* Destruct the swi */
+    swiHandle = TransportVirtio_Instance_State_swiObj(obj);
+    if (swiHandle != NULL) {
+      Swi_destruct(Swi_struct(swiHandle));
+    }
+    
+   GateSwi_delete(&(TransportVirtio_module->gateSwiHandle));
+
+   /* Delete the VirtQueue instance */
+   if (obj->isHost) {
+       VirtQueue_delete(obj->vq_slave);
+   }
+   else{
+       VirtQueue_delete(obj->vq_host);
+   }
+
     switch(status) {
         case 0: /* MessageQ_registerTransport succeeded */
             ti_sdo_ipc_MessageQ_unregisterTransport(obj->remoteProcId,
@@ -366,14 +393,6 @@ Void TransportVirtio_Instance_finalize(TransportVirtio_Object *obj, Int status)
         case 2: /* MessageQ_registerTransport failed */
             break;
     }
-
-    /* Destruct the swi */
-    swiHandle = TransportVirtio_Instance_State_swiObj(obj);
-    if (swiHandle != NULL) {
-        Swi_destruct(Swi_struct(swiHandle));
-    }
-
-   GateSwi_delete(&gateSwi);
 #undef FXNN
 }
 
@@ -402,14 +421,14 @@ Bool TransportVirtio_put(TransportVirtio_Object *obj, Ptr msg)
                  obj->isHost);
 
     /* Send to remote processor: */
-    key = GateSwi_enter(gateSwi);  // Protect vring structs.
+    key = GateSwi_enter(TransportVirtio_module->gateSwiHandle);  
     if (obj->isHost)  {
        rp_msg = getTxBuf(obj, obj->vq_slave);
     }
     else {
        token = VirtQueue_getAvailBuf(obj->vq_host, (Void **)&rp_msg);
     }
-    GateSwi_leave(gateSwi, key);
+    GateSwi_leave(TransportVirtio_module->gateSwiHandle, key);
 
     if ((obj->isHost && rp_msg) || token >= 0) {
         /* Assert msg->msgSize <= vring's max fixed buffer size */
@@ -435,7 +454,7 @@ Bool TransportVirtio_put(TransportVirtio_Object *obj, Ptr msg)
                   (IArg)rp_msg, (IArg)rp_msg->srcAddr, (IArg)rp_msg->dstAddr,
                   (IArg)rp_msg->dataLen);
 
-        key = GateSwi_enter(gateSwi);  // Protect vring structs.
+        key = GateSwi_enter(TransportVirtio_module->gateSwiHandle);  
         if (obj->isHost)  {
             VirtQueue_addAvailBuf(obj->vq_slave, rp_msg);
             VirtQueue_kick(obj->vq_slave);
@@ -444,7 +463,7 @@ Bool TransportVirtio_put(TransportVirtio_Object *obj, Ptr msg)
             VirtQueue_addUsedBuf(obj->vq_host, token);
             VirtQueue_kick(obj->vq_host);
         }
-        GateSwi_leave(gateSwi, key);
+        GateSwi_leave(TransportVirtio_module->gateSwiHandle, key);
     }
     else {
         status = MessageQ_E_FAIL;

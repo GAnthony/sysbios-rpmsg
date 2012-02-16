@@ -1,5 +1,5 @@
-/* --COPYRIGHT--,BSD
- * Copyright (c) $(CPYYEAR), Texas Instruments Incorporated
+/*
+ * Copyright (c) 2012, Texas Instruments Incorporated
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -28,66 +28,40 @@
  * WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR
  * OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE,
  * EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
- * --/COPYRIGHT--*/
-/*
- *  ======== package.xs ========
- *
  */
-
-
 /*
- *  ======== Package.getLibs ========
- *  This function is called when a program's configuration files are
- *  being generated and it returns the name of a library appropriate
- *  for the program's configuration.
+ *  ======== VirtQueue.xs ================
  */
+ 
+var MultiProc = null;
+var VirtQueue = null;
 
-function getLibs(prog)
+ /*
+ *  ======== module$use ========
+ */
+function module$use()
 {
-    var suffix;
 
-    /* find a compatible suffix */
-    if ("findSuffix" in prog.build.target) {
-	suffix = prog.build.target.findSuffix(this);
-    }
-    else {
-	suffix = prog.build.target.suffix;
-    }
+    MultiProc   = xdc.useModule("ti.sdo.utils.MultiProc");
 
-    var name = this.$name + ".a" + suffix;
-    var lib = "";
+    Swi = xdc.useModule("ti.sysbios.knl.Swi");
+    Interrupt = xdc.useModule("ti.ipc.family.omap4430.InterruptM3");
 
-    lib = "lib/" + this.profile + "/" + name;
-    if (java.io.File(this.packageBase + lib).exists()) {
-        return lib;
-    }
-
-    /* all ti.targets return whole_program_debug library by default */
-    if (prog.build.target.$name.match(/^ti\.targets\./)) {
-        lib = "lib/" + "whole_program_debug/" + name;
-        if (java.io.File(this.packageBase + lib).exists()) {
-            return lib;
-        }
-    }
-
-    /* all other targets, return release library by default */
-    else {
-        lib = "lib/" + "release/" + name;
-        if (java.io.File(this.packageBase + lib).exists()) {
-            return lib;
-        }
-    }
-
-    /* could not find any library, throw exception */
-    throw Error("Library not found: " + name);
+    this.hostProcId      = MultiProc.getIdMeta("HOST");
+    this.dspProcId       = MultiProc.getIdMeta("DSP");
+    this.sysm3ProcId     = MultiProc.getIdMeta("CORE0");
+    this.appm3ProcId     = MultiProc.getIdMeta("CORE1");
 }
 
 /*
- *  ======== package.close ========
+ *  ======== module$static$init ========
  */
-function close()
+function module$static$init(mod, params)
 {
-    if (xdc.om.$name != 'cfg') {
-        return;
-    }
+  /* Init VirtQueue params */
+  mod.numQueues = 0;
+  mod.hostSlaveSynced = 0;
+  mod.virtQueueInitialized = 0;
+  mod.queueRegistry = null;
 }
+

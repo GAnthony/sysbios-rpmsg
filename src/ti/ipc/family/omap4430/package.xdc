@@ -1,5 +1,5 @@
-/* --COPYRIGHT--,BSD
- * Copyright (c) $(CPYYEAR), Texas Instruments Incorporated
+/* 
+ * Copyright (c) 2011, Texas Instruments Incorporated
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -28,66 +28,16 @@
  * WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR
  * OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE,
  * EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
- * --/COPYRIGHT--*/
+ */
 /*
- *  ======== package.xs ========
+ *  ======== package.xdc ========
  *
  */
-
-
-/*
- *  ======== Package.getLibs ========
- *  This function is called when a program's configuration files are
- *  being generated and it returns the name of a library appropriate
- *  for the program's configuration.
+ 
+/*!
+ *  ======== ti.ipc.family.omap4430 ========
  */
-
-function getLibs(prog)
-{
-    var suffix;
-
-    /* find a compatible suffix */
-    if ("findSuffix" in prog.build.target) {
-	suffix = prog.build.target.findSuffix(this);
-    }
-    else {
-	suffix = prog.build.target.suffix;
-    }
-
-    var name = this.$name + ".a" + suffix;
-    var lib = "";
-
-    lib = "lib/" + this.profile + "/" + name;
-    if (java.io.File(this.packageBase + lib).exists()) {
-        return lib;
-    }
-
-    /* all ti.targets return whole_program_debug library by default */
-    if (prog.build.target.$name.match(/^ti\.targets\./)) {
-        lib = "lib/" + "whole_program_debug/" + name;
-        if (java.io.File(this.packageBase + lib).exists()) {
-            return lib;
-        }
-    }
-
-    /* all other targets, return release library by default */
-    else {
-        lib = "lib/" + "release/" + name;
-        if (java.io.File(this.packageBase + lib).exists()) {
-            return lib;
-        }
-    }
-
-    /* could not find any library, throw exception */
-    throw Error("Library not found: " + name);
-}
-
-/*
- *  ======== package.close ========
- */
-function close()
-{
-    if (xdc.om.$name != 'cfg') {
-        return;
-    }
+package ti.ipc.family.omap4430 [1,0,0,0] {
+    module    InterruptM3;
+    module    VirtQueue;
 }
