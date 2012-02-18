@@ -1,29 +1,33 @@
                                SYS/BIOS RPMSG
 
-This tree contains alternative IPC transports and Notify mechanisms.
-
-It also contains a .bin firmware generator tool in utils, for the purpose
-of generating a simple binary file that gets loaded to a core through the
-Android/Linux "SysLink 3.0" firmware loader.  The format of the .bin firmware
-file is proprietary.
+This tree contains BIOS IPC software which works with rpmsg Asymetric
+MultiProcessing and the remoteproc loader, developed originally for Linux.
 
 CLONE
     o From Linux workstation, in directory where cloned tree will reside:
 
+        This tree lives in various repos:
+
         /* Clone the 'sysbios-rpmsg' repository */
+        /* For ICS work: */
         git clone git://git.omapzoom.org/repo/sysbios-rpmsg.git (recommended)
                                    - or -
         git clone http://git.omapzoom.org/repo/sysbios-rpmsg.git
+
+	/* For open source or syslink 3 work: */
+        git clone git://github.com/GAnthony/sysbios-rpmsg.git
 
         /* Go into the newly cloned repository */
         cd sysbios-rpmsg
 
         /* Switch to the latest branch */
         git checkout -b mymaster remotes/origin/master
+        /* For syslink3 work, current branch is: */
+        git checkout -b syslink3 --track origin/syslink3
 
 
 TOOLS
-    o Gollum build requires the following tools to be installed at the minimum:
+    o Build requires the following tools to be installed at the minimum:
         - SYS/BIOS: RTOS running on the target slave processor
         - XDC: RTSC tools used for building and configuration of images
         - IPC: Base Inter-Processor Communication Package
@@ -37,9 +41,8 @@ TOOLS
       webpage (after registering with TI):
           https://www-a.ti.com/downloads/sds_support/TICodegenerationTools/
 
-    o The following are the current versions and download instructions for these
-      tools.
-       1) BIOS:  6.32.01.38
+    o See the Makefile and src/config.bld for the current versions of dependencies and tools, and replace versions in the links below:
+       1) BIOS:  
           Public Links:-
             Linux:   http://software-dl.ti.com/dsps/dsps_public_sw/sdo_sb/targetcontent/bios/sysbios/6_32_01_38/exports/bios_setuplinux_6_32_01_38.bin
             Windows: http://software-dl.ti.com/dsps/dsps_public_sw/sdo_sb/targetcontent/bios/sysbios/6_32_01_38/exports/bios_setupwin32_6_32_01_38.exe
@@ -47,7 +50,7 @@ TOOLS
             Linux:   http://www.sanb.design.ti.com//tisb_releases//BIOS/6_32_01_38/exports/bios_setuplinux_6_32_01_38.bin
             Windows: http://www.sanb.design.ti.com//tisb_releases//BIOS/6_32_01_38/exports/bios_setupwin32_6_32_01_38.exe
 
-       2) XDC: 3.22.01.21
+       2) XDC: 
           Public Links:-
             Linux:   http://software-dl.ti.com/dsps/dsps_public_sw/sdo_sb/targetcontent/rtsc/3_22_01_21/exports/xdctools_setuplinux_3_22_01_21.bin
             Windows: http://software-dl.ti.com/dsps/dsps_public_sw/sdo_sb/targetcontent/rtsc/3_22_01_21/exports/xdctools_setupwin32_3_22_01_21.exe
@@ -55,14 +58,14 @@ TOOLS
             Linux:   http://www.sanb.design.ti.com//tisb_releases//XDCtools/3_22_01_21/exports/xdctools_setuplinux_3_22_01_21.bin
             Windows: http://www.sanb.design.ti.com//tisb_releases//XDCtools/3_22_01_21/exports/xdctools_setupwin32_3_22_01_21.exe
 
-       3) CGT TMS470: 4.9.0
+       3) CGT TMS470: 
           Public Links:-
             TMS470 Compiler is not available for free publicly. Please contact your TI representative.
          TI Internal Links:-
             Linux:   http://syntaxerror.dal.design.ti.com/release/releases/arm/rel4_9_0/build/install/ti_cgt_tms470_4.9.0_setup_linux_x86.bin
             Windows: http://syntaxerror.dal.design.ti.com/release/releases/arm/rel4_9_0/build/install/ti_cgt_tms470_4.9.0_setup_win32.exe
 
-       4) CGT C6000: 7.2.0
+       4) CGT C6000: 
           Public Links:-
             Please pick the appropriate version from the above public link.
           TI Internal Links:-
@@ -92,8 +95,8 @@ BUILD (Linux Environment)
     4) From the top-level sysbios-rpmsg directory, type in 'make' to build the
        entire tree plus sample applications
 
-    5) A default firmware binary, ducati-m3.bin is generated in the src/utils
-       directory, using two of the sample baseimages in Gollum tree.
+    5) Copy the .xem3 ELF binary of choice (output of sysbios-rpmsg make) to
+   the target /lib/firmware directory, and rename it to ducati-m3-core0.xem3.
 
 CLEAN (Linux Environment)
     1) Type 'make clean' to clean the generated libraries and executables
@@ -105,6 +108,21 @@ CLEAN (Linux Environment)
               git clean -df
               git reset --hard
 
-GITWEB
-    o The commit history can be looked up using the gitweb interface at:
-      http://git.omapzoom.org/?p=repo/sysbios-rpmsg.git;a=summary
+SYSLINK 3 Branch:
+
+This is a prototype of a BIOS IPC transport for MessageQ, over vrings.
+
+It currently supports communication:
+- Linux A9 to BIOS Ducati sysM3 (CORE0);
+- Ducati AppM3 (CORE1) to sysM3 (CORE0).
+
+This requires Linux side MessageQ source code currently found in:
+        https://github.com/GAnthony/syslink3
+
+See the README there for build/load/test instructions.
+
+Current Constraints:
+* This is currently *not* compatible with MessageQCopy;
+* No NameServer transport, so host Queue Index is assumed to be zero.
+* Only sends to a MessageQ endpoint on Linux side at rpmsg chnl = 1024.
+
