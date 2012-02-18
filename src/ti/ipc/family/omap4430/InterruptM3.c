@@ -39,11 +39,10 @@
 #include <xdc/runtime/Log.h>
 #include <xdc/runtime/Diags.h>
 
-//#include <ti/sysbios/hal/Hwi.h>
 #include <ti/sysbios/family/arm/m3/Hwi.h>
 #include <ti/sysbios/family/arm/ducati/Core.h>
 
-#include <ti/sdo/utils/MultiProc.h>
+#include <ti/ipc/MultiProc.h>
 
 #include <ti/sdo/ipc/notifyDrivers/IInterrupt.h>
 
@@ -146,7 +145,7 @@ Void InterruptM3_intRegister(UInt16 remoteProcId,
     InterruptM3_FxnTable *table;
 
     /* Ensure that remoteProcId is valid */
-    Assert_isTrue(remoteProcId < ti_sdo_utils_MultiProc_numProcessors, 
+    Assert_isTrue(remoteProcId < MultiProc_getNumProcessors(), 
             NULL);
 
     if (remoteProcId == InterruptM3_dspProcId) {
