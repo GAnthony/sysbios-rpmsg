@@ -94,13 +94,6 @@ void myIpcStart(UInt procId)
     Assert_isTrue(status >= 0, NULL);
 
     /*
-     * Wait for other side to create his nameservice.
-     * We really need a handshake in this virtio layer.
-     */
-    System_printf("Task Sleep...\n");
-    Task_sleep(1000);
-
-    /*
      * Tell the Linux host we have a MessageQ service over rpmsg.
      *
      * TBD: This should be in the VirtioTransport initialization, but we need
