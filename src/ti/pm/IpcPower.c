@@ -140,6 +140,9 @@ Void IpcPower_suspend()
  */
 Void IpcPower_idle()
 {
+    //TEMP: Tyring to get Task_sleep() to work!
+    return;
+
     REG32(M3_SCR_REG) |= 1 << DEEPSLEEP_BIT;
     REG32(WUGEN_MEVT1) |= WUGEN_INT_MASK;
     asm(" wfi");
