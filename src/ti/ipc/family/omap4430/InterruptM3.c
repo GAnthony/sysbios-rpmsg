@@ -342,6 +342,10 @@ Void InterruptM3_intShmStub(UArg arg)
         Log_print1(Diags_USER1,
             "InterruptM3_isr: Interrupt received, payload = 0x%x",
             (IArg)payload);
+        /*
+         * We don't know from which processor we got the interrupt, but
+         * they all have the same ISR fxn.  So, use index=1 arbitrarily.
+         */
         table = &(InterruptM3_module->fxnTable[1]);
         (table->func)(payload);
     }

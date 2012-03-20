@@ -46,24 +46,15 @@
 #include <ti/sysbios/knl/Semaphore.h>
 #include <ti/sdo/utils/_NameServer.h>
 #include <ti/sdo/utils/INameServerRemote.h>
+#include <ti/ipc/MultiProc.h>
+#include <ti/ipc/namesrv/_NameServerRemoteRpmsg.h>
+#include <ti/ipc/rpmsg/rpmsg.h>
+#include <ti/ipc/transports/_TransportVirtio.h>
 
 #include "package/internal/NameServerRemoteRpmsg.xdc.h"
 
-#define MAXNAMEINCHAR	80
-#define NAMEARRAYSZIE   (((MAXNAMEINCHAR - 1) / sizeof(Bits32)) + 1)
-
-/* message sent to remote procId */
-typedef struct NameServerMsg {
-    Bits32  value;              /* holds value                      */
-    Bits32  request;            /* whether its a request/response   */
-    Bits32  requestStatus;      /* status of request                */
-    Bits32  reserved;           /* reserved field                   */
-                                /* name of NameServer instance      */
-    Bits32  instanceName[NAMEARRAYSZIE];
-                                /* name of NameServer entry         */
-    Bits32  name[NAMEARRAYSZIE];
-} NameServerMsg;
-
+/* Storage for NameServer message replies. Protected by gateMutex: */
+static  NameServerMsg    NameServer_msg;
 
 /*
  *************************************************************************
@@ -80,9 +71,11 @@ Void NameServerRemoteRpmsg_Instance_init(NameServerRemoteRpmsg_Object *obj,
 
     obj->remoteProcId = remoteProcId;
 
+    NameServerRemoteRpmsg_module->nsMsg = &NameServer_msg;
+
     /* register the remote driver with NameServer */
     ti_sdo_utils_NameServer_registerRemoteDriver(
-	NameServerRemoteRpmsg_Handle_upCast(obj), remoteProcId);
+        NameServerRemoteRpmsg_Handle_upCast(obj), remoteProcId);
 
 }
 #undef FXNN
@@ -169,18 +162,26 @@ Int NameServerRemoteRpmsg_get(NameServerRemoteRpmsg_Object *obj,
                         ISync_Handle syncHandle,
                         Error_Block *eb)
 {
-    Int	status = NameServer_E_NOTFOUND;
+    Int        status = NameServer_E_NOTFOUND;
     Int len;
     IArg key;
     NameServerMsg    msg;
+    NameServerMsg    *reply_msg;
     Semaphore_Handle semRemoteWait =
-	NameServerRemoteRpmsg_module->semRemoteWait;
+        NameServerRemoteRpmsg_module->semRemoteWait;
+
     GateMutex_Handle gateMutex = NameServerRemoteRpmsg_module->gateMutex;
 
     Log_print1(Diags_INFO, FXNN": name: %s", (IArg)name);
 
     /* enter gate - prevent multiple threads from entering */
     key = GateMutex_enter(gateMutex);
+
+    /* First, check to see that NameServer is started remotely: */
+    if (NameServerRemoteRpmsg_module->ns_port == (-1)) {
+        status = NameServer_E_RESOURCE;
+        goto exit;
+    }
 
     /* Create request message and send to remote processor: */
     msg.request = NameServerRemoteRpmsg_REQUEST;
@@ -194,20 +195,48 @@ Int NameServerRemoteRpmsg_get(NameServerRemoteRpmsg_Object *obj,
     Assert_isTrue(len < MAXNAMEINCHAR, NameServerRemoteRpmsg_A_nameIsTooLong);
     strncpy((Char *)msg.name, name, len + 1);
 
-#if 0
-    TransportVirtio_sendRpmsg(msg, sizeof(msg), dst, src);
+    Log_print3(Diags_INFO, FXNN": Requesting from procId %d, %s:%s...\n",
+               obj->remoteProcId, (IArg)msg.instanceName, (IArg)msg.name);
+    sendRpmsg(obj->remoteProcId, NameServerRemoteRpmsg_module->ns_port,
+               RPMSG_MESSAGEQ_PORT, (Ptr)&msg, sizeof(msg));
 
     /* Now pend for response */
+    status = Semaphore_pend(semRemoteWait, NameServerRemoteRpmsg_timeout);
 
-#else  //TEMP:
-    /* We expect the value from Linux side to be (procID = 0, index = 0): */
-    if (!strcmp(name, "HOST")) {
-	*(UInt32 *)value = 0x0;
-	*valueLen = sizeof(UInt32);
-	status = NameServer_S_SUCCESS;
+    if (status == FALSE) {
+        Log_print0(Diags_INFO, FXNN": Wait for NS reply timed out\n");
+        /* return timeout failure */
+        return (NameServer_E_OSFAILURE);
     }
-#endif
 
+    /* get the message */
+    reply_msg = NameServerRemoteRpmsg_module->nsMsg;
+
+    if (reply_msg->requestStatus) {
+        /* name is found */
+
+        /* set length to amount of data that was copied */
+        *valueLen = sizeof(Bits32);
+
+        /* set the contents of value */
+        memcpy(value, &(reply_msg->value), sizeof(Bits32));
+
+        /* set the status to success */
+        status = NameServer_S_SUCCESS;
+        Log_print4(Diags_INFO, FXNN": Reply from: %d, %s:%s, value: 0x%x...\n",
+              obj->remoteProcId, (IArg)msg.instanceName, (IArg)msg.name,
+              *(UInt32 *)value);
+    }
+    else {
+        /* name is not found */
+        Log_print2(Diags_INFO, FXNN": value for %s:%s not found.\n",
+                   (IArg)msg.instanceName, (IArg)msg.name);
+
+        /* set status to not found */
+        status = NameServer_E_NOTFOUND;
+    }
+
+exit:
     /* leave the gate */
     GateMutex_leave(gateMutex, key);
 
@@ -222,3 +251,66 @@ SizeT NameServerRemoteRpmsg_sharedMemReq(Ptr sharedAddr)
 {
     return (0);
 }
+
+#define FXNN "NameServerRemote_processMessage"
+void NameServerRemote_processMessage(NameServerMsg * msg)
+{
+    NameServer_Handle handle;
+    Int               status = NameServer_E_FAIL;
+    Semaphore_Handle  semRemoteWait =
+                        NameServerRemoteRpmsg_module->semRemoteWait;
+    UInt16 dstProc  = MultiProc_getId("HOST");
+
+    Assert_isTrue(msg != NULL, NULL);
+
+    if (msg->request == NameServerRemoteRpmsg_REQUEST) {
+        Log_print1(Diags_INFO, FXNN": Request from procId %d.\n", dstProc);
+
+        /*
+         *  Message is a request. Lookup name in NameServer table.
+         *  Send a response message back to source processor.
+         */
+        handle = NameServer_getHandle((String)msg->instanceName);
+
+        if (handle != NULL) {
+            /* Search for the NameServer entry */
+            status = NameServer_getLocalUInt32(handle,
+                     (String)msg->name, &msg->value);
+        }
+
+        /* set the request status */
+        if (status < 0) {
+            msg->requestStatus = 0;
+        }
+        else {
+            msg->requestStatus = 1;
+        }
+
+        /* specify message as a response */
+        msg->request = NameServerRemoteRpmsg_RESPONSE;
+
+        /* send response message to remote processor */
+        Log_print3(Diags_INFO, FXNN": Replying with: %s:%s, value: 0x%x\n",
+               (IArg)msg->instanceName, (IArg)msg->name, msg->value);
+        sendRpmsg(dstProc, NameServerRemoteRpmsg_module->ns_port,
+                 RPMSG_MESSAGEQ_PORT, (Ptr)msg, sizeof(NameServerMsg));
+    }
+    else {
+        Log_print0(Diags_INFO, FXNN": NameServer Reply. Posting Sem...\n");
+
+        /* Save the response message.  */
+        memcpy(NameServerRemoteRpmsg_module->nsMsg, msg,
+                sizeof (NameServerMsg));
+        /* Post the semaphore upon which NameServer_get() is waiting */
+        Semaphore_post(semRemoteWait);
+    }
+}
+#undef FXNN
+
+#define FXNN "NameServerRemote_SetNameServerPort"
+void NameServerRemote_SetNameServerPort(UInt port)
+{
+    Log_print1(Diags_INFO, FXNN": ns_port: %d", port);
+    NameServerRemoteRpmsg_module->ns_port = port;
+}
+#undef FXNN

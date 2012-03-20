@@ -101,6 +101,7 @@ internal:
     struct Module_State {
         Semaphore.Handle    semRemoteWait;  /* sem to wait on remote proc    */
         GateMutex.Handle    gateMutex;      /* gate to protect critical code */
-        Ptr                 rpmsg;          /* pointer to response message   */
+        Ptr                 nsMsg;          /* pointer to NameServer msg     */
+        Int                 ns_port;        /* Name Server port rpmsg addr   */
     };
 }

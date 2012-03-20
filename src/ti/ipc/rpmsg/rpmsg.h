@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, Texas Instruments Incorporated
+ * Copyright (c) 2012, Texas Instruments Incorporated
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -29,52 +29,52 @@
  * OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE,
  * EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
-/*
- *  ======== NameServerRemoteRpmsg.xs ========
+/** ============================================================================
+ *  @file       rpmsg.h
+ *
+ *  @brief      rpmsg and related structures.
+ *
  */
 
 
-var NameServerRemoteRpmsg = null;
-var Semaphore  = null;
-var Clock = null;
-var GateMutex = null;
+#ifndef ti_ipc_rpmsg__include
+#define ti_ipc_rpmsg__include
 
-/*
- *  ======== module$use ========
- */
-function module$use()
-{
-    NameServerRemoteRpmsg = this;
-    Semaphore       = xdc.useModule("ti.sysbios.knl.Semaphore");
-    Clock           = xdc.useModule("ti.sysbios.knl.Clock");
-    GateMutex       = xdc.useModule("ti.sysbios.gates.GateMutex");
+#if defined (__cplusplus)
+extern "C" {
+#endif
+
+enum rpmsg_ns_flags {
+    RPMSG_NS_CREATE = 0,
+    RPMSG_NS_DESTROY = 1
+};
+
+#define RPMSG_NAME_SIZE 32
+
+
+typedef struct rpmsg_ns_msg {
+    char name[RPMSG_NAME_SIZE]; /* name of service including 0 */
+    UInt32 addr;                /* address of the service */
+    UInt32 flags;               /* see below */
+} rpmsg_ns_msg;
+
+
+#define NAMESERVICE_PORT   53
+
+/* Message Header: Must match rp_msg_hdr in virtio_rp_msg.h on Linux side. */
+typedef struct RpMsg_Header {
+    Bits32 srcAddr;                 /* source endpoint addr               */
+    Bits32 dstAddr;                 /* destination endpoint addr          */
+    Bits32 reserved;                /* reserved                           */
+    Bits16 dataLen;                 /* data length                        */
+    Bits16 flags;                   /* bitmask of different flags         */
+    UInt8  payload[];               /* Data payload                       */
+} RpMsg_Header;
+
+typedef RpMsg_Header *RpMsg;
+
+
+#if defined (__cplusplus)
 }
-
-/*
- *  ======== module$static$init ========
- *  Initialize module values.
- */
-function module$static$init(mod, params)
-{
-    mod.nsMsg= null;
-
-    /* calculate the timeout value */
-    if (NameServerRemoteRpmsg.timeoutInMicroSecs != ~(0)) {
-        NameServerRemoteRpmsg.timeout =
-            NameServerRemoteRpmsg.timeoutInMicroSecs / Clock.tickPeriod;
-    }
-    else {
-        NameServerRemoteRpmsg.timeout =
-            NameServerRemoteRpmsg.timeoutInMicroSecs;
-    }
-
-    /* create the semaphore to wait for a response message */
-    mod.semRemoteWait = Semaphore.create(0);
-
-    /* create GateMutex */
-    mod.gateMutex = GateMutex.create();
-
-    /* Will initialize correctly during TransportVirtio swiFxn ns announce */
-    mod.ns_port = (-1);
-}
-
+#endif /* defined (__cplusplus) */
+#endif /* ti_ipc_rpmsg__include */

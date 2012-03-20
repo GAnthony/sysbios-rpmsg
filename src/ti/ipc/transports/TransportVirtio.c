@@ -83,30 +83,21 @@
 #include <ti/sysbios/knl/Swi.h>
 #include <ti/sysbios/gates/GateSwi.h>
 
-#include "_TransportVirtio.h"
-#include "package/internal/TransportVirtio.xdc.h"
-
 #include <ti/sdo/utils/_MultiProc.h>
 #include <ti/sdo/ipc/_MessageQ.h>
 
 #include <ti/ipc/rpmsg/virtio_ring.h>
+#include <ti/ipc/rpmsg/rpmsg.h>
 /* TBD: VirtQueue.h needs to live in a common directory, not family specific.*/
 #include <ti/ipc/family/omap4430/VirtQueue.h>
 
+#include <ti/ipc/namesrv/_NameServerRemoteRpmsg.h>
+
+#include "_TransportVirtio.h"
+#include "package/internal/TransportVirtio.xdc.h"
+
 /* TBD: until NameMap built over a new rpmsg API: */
 static VirtQueue_Handle vq_host;
-
-/* RPMSG Header: Must match rpmsg_hdr in rpmsg.h on Linux side.  */
-typedef struct RpMsg_Header {
-    Bits32 srcAddr;                 /* source endpoint addr               */
-    Bits32 dstAddr;                 /* destination endpoint addr          */
-    Bits32 reserved;                /* reserved                           */
-    Bits16 dataLen;                 /* data length                        */
-    Bits16 flags;                   /* bitmask of different flags         */
-    UInt8  payload[];               /* Data payload                       */
-} RpMsg_Header;
-
-typedef RpMsg_Header *RpMsg_Msg;
 
 /* Maximum RPMSG payload: */
 #define MAX_PAYLOAD (VirtQueue_RP_MSG_BUF_SIZE - sizeof(RpMsg_Header))
@@ -114,6 +105,11 @@ typedef RpMsg_Header *RpMsg_Msg;
 /* That special per processor RPMSG channel reserved to multiplex MessageQ */
 #define RPMSG_MESSAGEQ_PORT         61
 
+/* Addresses below this are assumed to be bound to MessageQ objects: */
+#define RPMSG_RESERVED_ADDRESSES     (1024)
+
+/* Name of the rpmsg socket on host: */
+#define RPMSG_SOCKET_NAME  "rpmsg-proto"
 
 #define FXNN "callback_usedBufReady"
 static Void callback_usedBufReady(VirtQueue_Handle vq)
@@ -175,50 +171,33 @@ static Void *getTxBuf(TransportVirtio_Object *obj, VirtQueue_Handle vq)
 
 /*  --------------  TEMP NameService over VirtQueue ----------------------- */
 
-#define RPMSG_NAME_SIZE 32
-
-typedef unsigned int u32;
-
-struct rpmsg_ns_msg {
-    char name[RPMSG_NAME_SIZE]; /* name of service including 0 */
-    u32 addr;                   /* address of the service */
-    u32 flags;                  /* see below */
-} __packed;
-
-
-#define NAMESERVICE_PORT   53
-
-/* Message Header: Must match rp_msg_hdr in virtio_rp_msg.h on Linux side. */
-typedef struct Rpmsg_Hdr {
-    Bits32 srcAddr;                 /* source endpoint addr               */
-    Bits32 dstAddr;                 /* destination endpoint addr          */
-    Bits32 reserved;                /* reserved                           */
-    Bits16 dataLen;                 /* data length                        */
-    Bits16 flags;                   /* bitmask of different flags         */
-    UInt8  payload[];               /* Data payload                       */
-} Rpmsg_Hdr;
-
-typedef Rpmsg_Hdr *Rpmsg;
-
-void sendRpmsg(Char * name, UInt32 port, enum rpmsg_ns_flags flags)
+void nameService_register(char * name, UInt32 port, enum rpmsg_ns_flags flags)
 {
     struct rpmsg_ns_msg nsMsg;
+    UInt16 len      = sizeof(nsMsg);
     UInt16 dstProc  = MultiProc_getId("HOST");
     UInt32 dstEndpt = NAMESERVICE_PORT;
     UInt32 srcEndpt = port;
     Ptr    data     = &nsMsg;
-    UInt16 len      = sizeof(nsMsg);
-    Int16             token = 0;
-    Rpmsg             msg;
-    IArg              key;
 
     strncpy(nsMsg.name, name, RPMSG_NAME_SIZE);
+
     nsMsg.addr = port;
     nsMsg.flags = flags;
 
+    sendRpmsg(dstProc, dstEndpt, srcEndpt, data, len);
+}
+
+void sendRpmsg(UInt16 dstProc, UInt32 dstEndpt, UInt32 srcEndpt,
+              Ptr data, UInt16 len)
+{
+    Int16             token = 0;
+    RpMsg             msg;
+    IArg              key;
+
     if (dstProc != MultiProc_self()) {
         /* Send to remote processor: */
-	/* Protect vring structs. */
+        /* Protect vring structs. */
         key = GateSwi_enter(TransportVirtio_module->gateSwiHandle);  
         token = VirtQueue_getAvailBuf(vq_host, (Void **)&msg);
         GateSwi_leave(TransportVirtio_module->gateSwiHandle, key);
@@ -271,10 +250,11 @@ Int TransportVirtio_Instance_init(TransportVirtio_Object *obj,
     /* set object fields */
     obj->priority     = params->priority;
     obj->remoteProcId = remoteProcId;
+    obj->name_server_port = (-1);
 
-   /* From the remoteProcId, we must determine if this Virtio Transport is
-    * acting as host or a slave.
-    */
+    /* From the remoteProcId, we must determine if this Virtio Transport is
+     * acting as host or a slave.
+     */
 #if 0
     /* Linux side currently assumes HOST is lowest ID core in the system:
      */
@@ -338,8 +318,8 @@ Int TransportVirtio_Instance_init(TransportVirtio_Object *obj,
 
     if (obj->isHost)  {
        /* Initialize fields used by getTxBuf(): */
-    	obj->sbufs = (Char *)buf_addr + VirtQueue_RP_MSG_NUM_BUFS * VirtQueue_RP_MSG_BUF_SIZE;
-	obj->last_sbuf = 0;
+            obj->sbufs = (Char *)buf_addr + VirtQueue_RP_MSG_NUM_BUFS * VirtQueue_RP_MSG_BUF_SIZE;
+        obj->last_sbuf = 0;
 
        /* Host needs to prime his vq with some buffers for receiving: */
        for (i = 0; i < VirtQueue_RP_MSG_NUM_BUFS; i++) {
@@ -415,7 +395,7 @@ Bool TransportVirtio_put(TransportVirtio_Object *obj, Ptr msg)
     UInt         msgSize;
     Int16        token = (-1);
     IArg         key;
-    RpMsg_Msg    rp_msg = NULL;
+    RpMsg        rp_msg = NULL;
 
     Log_print1(Diags_ENTRY, "--> "FXNN": Entered: isHost: %d",
                  obj->isHost);
@@ -510,11 +490,12 @@ Void TransportVirtio_swiFxn(UArg arg0, UArg arg1)
     UInt32            queueId;
     MessageQ_Msg      msg;
     MessageQ_Msg      buf = NULL;
-    RpMsg_Msg         rp_msg;
+    RpMsg             rp_msg;
     UInt              msgSize;
     TransportVirtio_Object      *obj;
     Bool              buf_avail = FALSE;
-    struct rpmsg_ns_msg *nsMsg;
+    struct rpmsg_ns_msg * nsMsg; /* Name Service Message */
+    NameServerMsg     * ns_msg;  /* Name Server Message */
 
     Log_print0(Diags_ENTRY, "--> "FXNN);
 
@@ -536,17 +517,36 @@ Void TransportVirtio_swiFxn(UArg arg0, UArg arg1)
                   (IArg)rp_msg, (IArg)rp_msg->srcAddr, (IArg)rp_msg->dstAddr,
                   (IArg)rp_msg->dataLen);
 
-	/* We can't handle yet an rpmsg other than for MessageQ service: */
-	if (rp_msg->dstAddr != RPMSG_MESSAGEQ_PORT) {
-		if (rp_msg->dstAddr == NAMESERVICE_PORT) {
-		    nsMsg = (struct rpmsg_ns_msg *)rp_msg->payload;
-		    Log_print2(Diags_INFO, FXNN": announcement from %d: %s\n",
-			nsMsg->addr, (IArg)nsMsg->name);
-		}
-		goto skip;
-	}
+        /* See if this is an rpmsg ns announcment... : */
+        if (rp_msg->dstAddr != RPMSG_MESSAGEQ_PORT) {
+            if (rp_msg->dstAddr == NAMESERVICE_PORT) {
+                nsMsg = (struct rpmsg_ns_msg *)rp_msg->payload;
+                Log_print2(Diags_INFO, FXNN": ns announcement "
+                        "from %d: %s\n", nsMsg->addr, (IArg)nsMsg->name);
+                /* ... and if it is from our rpmsg-proto socket, save
+                 * the rpmsg src address as the NameServer reply address:
+                 */
+                if (!strcmp(nsMsg->name, RPMSG_SOCKET_NAME) &&
+                    rp_msg->srcAddr == NAME_SERVER_RPMSG_ADDR) {
+                    NameServerRemote_SetNameServerPort(rp_msg->srcAddr);
+                    obj->name_server_port = rp_msg->srcAddr;
+                }
+            }
+            goto skip;
+        }
+        else if (rp_msg->srcAddr >= RPMSG_RESERVED_ADDRESSES) {
+            /* This could either be a NameServer request or a MessageQ.
+             * Check the NameServerMsg reserved field to distinguish.
+             */
+            ns_msg = (NameServerMsg *)rp_msg->payload;
+            if (ns_msg->reserved == NAMESERVER_MSG_TOKEN) {
+                /* Process the NameServer request/reply message: */
+                NameServerRemote_processMessage(ns_msg);
+                goto skip;
+            }
+        }
 
-        /* Convert RpMsg_Msg payload into a MessageQ_Msg: */
+        /* Convert RpMsg payload into a MessageQ_Msg: */
         msg = (MessageQ_Msg)rp_msg->payload;
 
         Log_print4(Diags_INFO, FXNN": \n\tmsg->heapId: %d, "

@@ -37,21 +37,7 @@
 
 #include <ti/ipc/MultiProc.h>
 #include <ti/ipc/rpmsg/MessageQCopy.h>
-
-#define RPMSG_NAME_SIZE 32
-
-typedef unsigned int u32;
-
-struct rpmsg_ns_msg {
-    char name[RPMSG_NAME_SIZE]; /* name of service including 0 */
-    u32 addr;                   /* address of the service */
-    u32 flags;                  /* see below */
-} __packed;
-
-enum rpmsg_ns_flags {
-    RPMSG_NS_CREATE = 0,
-    RPMSG_NS_DESTROY = 1
-};
+#include <ti/ipc/rpmsg/rpmsg.h>
 
 static void sendMessage(Char * name, UInt32 port, enum rpmsg_ns_flags flags)
 {

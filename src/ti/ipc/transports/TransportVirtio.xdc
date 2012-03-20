@@ -91,5 +91,6 @@ internal:
         Ptr          vq_host;            /* Host's VirtQueue Handle          */
         Ptr          sbufs;              /* Buffers for sending              */
         UInt16       last_sbuf;          /* Index of last send buffer used   */
+        Int          name_server_port;   /* Rpmsg src address of Name Server */
     }
 }

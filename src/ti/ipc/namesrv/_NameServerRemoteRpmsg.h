@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, Texas Instruments Incorporated
+ * Copyright (c) 2012, Texas Instruments Incorporated
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -29,52 +29,28 @@
  * OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE,
  * EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
-/*
- *  ======== NameServerRemoteRpmsg.xs ========
- */
 
 
-var NameServerRemoteRpmsg = null;
-var Semaphore  = null;
-var Clock = null;
-var GateMutex = null;
+#define MAXNAMEINCHAR   80
+#define NAMEARRAYSZIE   (((MAXNAMEINCHAR - 1) / sizeof(Bits32)) + 1)
 
-/*
- *  ======== module$use ========
- */
-function module$use()
-{
-    NameServerRemoteRpmsg = this;
-    Semaphore       = xdc.useModule("ti.sysbios.knl.Semaphore");
-    Clock           = xdc.useModule("ti.sysbios.knl.Clock");
-    GateMutex       = xdc.useModule("ti.sysbios.gates.GateMutex");
-}
+/* message sent to remote procId */
+typedef struct NameServerMsg {
+    Bits32  reserved;           /* reserved field: must be first!   */
+    Bits32  value;              /* holds value                      */
+    Bits32  request;            /* whether its a request/response   */
+    Bits32  requestStatus;      /* status of request                */
+                                /* name of NameServer instance      */
+    Bits32  instanceName[NAMEARRAYSZIE];
+                                /* name of NameServer entry         */
+    Bits32  name[NAMEARRAYSZIE];
+} NameServerMsg;
 
-/*
- *  ======== module$static$init ========
- *  Initialize module values.
- */
-function module$static$init(mod, params)
-{
-    mod.nsMsg= null;
+#define NAME_SERVER_RPMSG_ADDR  0
 
-    /* calculate the timeout value */
-    if (NameServerRemoteRpmsg.timeoutInMicroSecs != ~(0)) {
-        NameServerRemoteRpmsg.timeout =
-            NameServerRemoteRpmsg.timeoutInMicroSecs / Clock.tickPeriod;
-    }
-    else {
-        NameServerRemoteRpmsg.timeout =
-            NameServerRemoteRpmsg.timeoutInMicroSecs;
-    }
+#define NAMESERVER_MSG_TOKEN   0x5678abcd
 
-    /* create the semaphore to wait for a response message */
-    mod.semRemoteWait = Semaphore.create(0);
+extern void NameServerRemote_processMessage(NameServerMsg * ns_msg);
+extern void NameServerRemote_SetNameServerPort(UInt port);
 
-    /* create GateMutex */
-    mod.gateMutex = GateMutex.create();
-
-    /* Will initialize correctly during TransportVirtio swiFxn ns announce */
-    mod.ns_port = (-1);
-}
 

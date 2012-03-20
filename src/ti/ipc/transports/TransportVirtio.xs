@@ -51,6 +51,7 @@ function module$use()
     VirtQueue       = xdc.useModule("ti.ipc.family.omap4430.VirtQueue");
     TransportVirtioSetup = xdc.useModule("ti.ipc.transports.TransportVirtioSetup");
     xdc.loadPackage("ti.ipc.family.omap4430");
+    xdc.loadPackage("ti.ipc.namesrv");
 }
 /*
  *  ======== module$static$init ========

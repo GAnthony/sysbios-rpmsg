@@ -30,10 +30,10 @@
  * EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-enum rpmsg_ns_flags {
-    RPMSG_NS_CREATE = 0,
-    RPMSG_NS_DESTROY = 1
-};
+#define RPMSG_MESSAGEQ_PORT         61
+#define NAME_SERVER_RPMSG_ADDR      0
 
-extern void sendRpmsg(Char * name, UInt32 port, enum rpmsg_ns_flags flags);
+extern void nameService_register(char * name, UInt32 port, enum rpmsg_ns_flags);
+extern void sendRpmsg(UInt16 dstProc, UInt32 dstEndpt, UInt32 srcEndpt,
+              Ptr data, UInt16 len);
 

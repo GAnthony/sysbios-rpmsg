@@ -55,10 +55,12 @@
 #include <ti/ipc/MessageQ.h>
 #include <ti/ipc/MultiProc.h>
 #include <ti/ipc/transports/TransportVirtioSetup.h>
+#include <ti/ipc/rpmsg/rpmsg.h>
 #include <ti/ipc/transports/_TransportVirtio.h>
 
 /*  ----------------------------------- BIOS6 module Headers         */
 #include <ti/sysbios/BIOS.h>
+#include <ti/sysbios/knl/Task.h>
 #include <ti/sysbios/heaps/HeapBuf.h>
 
 /*  ----------------------------------- To get globals from .cfg Header */
@@ -67,12 +69,17 @@
 typedef unsigned int u32;
 #include <ti/resources/rsc_table.h>
 
-#define RPMSG_MESSAGEQ_PORT         61
 
 void myNameMap_register(Char * name, UInt32 port)
 {
     System_printf("registering %s service on %d with HOST\n", name, port);
-    sendRpmsg(name, port, RPMSG_NS_CREATE);
+    nameService_register(name, port, RPMSG_NS_CREATE);
+}
+
+void myNameMap_unregister(Char * name, UInt32 port)
+{
+    System_printf("unregistering %s service on %d with HOST\n", name, port);
+    nameService_register(name, port, RPMSG_NS_DESTROY);
 }
 
 /*
@@ -81,7 +88,7 @@ void myNameMap_register(Char * name, UInt32 port)
  * Must be done after BIOS_start(), as TransportVirtio startup relies on
  * passing an interrupt handshake.
  */
-void myIpcStart(UInt procId)
+void myIpcAttach(UInt procId)
 {
     Int     status;
 
@@ -105,6 +112,32 @@ void myIpcStart(UInt procId)
 }
 
 /*
+ * This to get TransportVirtio_detach() and NameServerRemoteRpmsg_detach()
+ * called in lieu of using Ipc_start().
+ */
+void myIpcDetach(UInt procId)
+{
+    Int     status;
+
+    /* call TransportVirtioSetup to detach from remote processor */
+    status = TransportVirtioSetup_detach(procId);
+    Assert_isTrue(status >= 0, NULL);
+
+    /* call NameServer_detach from remote processor */
+    status = ti_sdo_utils_NameServer_SetupProxy_detach(procId);
+    Assert_isTrue(status >= 0, NULL);
+
+    /*
+     * Tell the host MessageQ service over rpmsg is going away.
+     *
+     * TBD: This should be in the VirtioTransport module.
+     * Also, NameMap should go over a bare rpmsg API, rather than
+     * MessageQCopy, as this clashes with MessageQ.
+     */
+    myNameMap_unregister("rpmsg-proto", RPMSG_MESSAGEQ_PORT);
+}
+
+/*
  *  ======== tsk1_func ========
  *  Receive and return messages
  */
@@ -120,9 +153,9 @@ Void tsk1_func(UArg arg0, UArg arg1)
     System_printf("tsk1_func: In tsk1_func.\n");
 
     /* Get our Transport loaded in absence of Ipc module: */
-    myIpcStart(procId);
+    myIpcAttach(procId);
 
-    /* Create a message queue. Using SyncSem as the synchronizer */
+    /* Create a message queue. */
     messageQ = MessageQ_create(SLAVE_MESSAGEQNAME, NULL);
     if (messageQ == NULL) {
         System_abort("MessageQ_create failed\n" );
@@ -132,23 +165,17 @@ Void tsk1_func(UArg arg0, UArg arg1)
     System_printf("tsk1_func: created MessageQ: %s; QueueID: 0x%x\n",
 	SLAVE_MESSAGEQNAME, MessageQ_getQueueId(messageQ));
 
-#if 1   // TBD: Need to implement NameServer.
     /* Open the remote message queue. Spin until it is ready. */
+    System_printf("tsk1_func: Calling MessageQ_open...\n");
     do {
-        System_printf("tsk1_func: Calling MessageQ_open...\n");
         status = MessageQ_open(HOST_MESSAGEQNAME, &remoteQueueId);
+        /* 1 second sleep: */
+        Task_sleep(10000);
     }
     while (status != MessageQ_S_SUCCESS);
 
     System_printf("tsk1_func: Remote MessageQ %s; QueueID: 0x%x\n",
 	HOST_MESSAGEQNAME, remoteQueueId);
-#else
-    /* No NameServer yet, so assume QueueIndex is same on both M3's: */
-    /* Force procId to be the destination: */
-    remoteQueueId = (remoteQueueId & 0x0000FFFF) | (procId << 16);
-    System_printf("tsk1_func: remoteQueueId: 0x%x\n",
-            remoteQueueId);
-#endif
 
     System_printf("Start the main loop\n");
     while (msgId < NUMLOOPS) {
@@ -177,6 +204,7 @@ Void tsk1_func(UArg arg0, UArg arg1)
         }
         msgId++;
     }
+    myIpcDetach(procId);
 
     System_printf("Test complete!\n");
     System_exit(0);
@@ -221,4 +249,4 @@ Int main(Int argc, Char* argv[])
 
     BIOS_start();
     return (0);
-}
+ }
