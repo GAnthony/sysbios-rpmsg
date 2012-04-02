@@ -280,9 +280,13 @@ void NameServerRemote_processMessage(NameServerMsg * msg)
 
         /* set the request status */
         if (status < 0) {
+            Log_print2(Diags_INFO, FXNN": Replying with: %s:%s not found\n",
+                       (IArg)msg->instanceName, (IArg)msg->name);
             msg->requestStatus = 0;
         }
         else {
+            Log_print3(Diags_INFO, FXNN": Replying with: %s:%s, value: 0x%x\n",
+               (IArg)msg->instanceName, (IArg)msg->name, msg->value);
             msg->requestStatus = 1;
         }
 
@@ -290,8 +294,6 @@ void NameServerRemote_processMessage(NameServerMsg * msg)
         msg->request = NameServerRemoteRpmsg_RESPONSE;
 
         /* send response message to remote processor */
-        Log_print3(Diags_INFO, FXNN": Replying with: %s:%s, value: 0x%x\n",
-               (IArg)msg->instanceName, (IArg)msg->name, msg->value);
         sendRpmsg(dstProc, NameServerRemoteRpmsg_module->ns_port,
                  RPMSG_MESSAGEQ_PORT, (Ptr)msg, sizeof(NameServerMsg));
     }
