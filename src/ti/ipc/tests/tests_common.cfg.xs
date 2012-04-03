@@ -140,7 +140,7 @@ Program.global.HEAP_NUMMSGS =    256; // Worst case: # recv msgs in vring
 Program.global.HEAPID       =     0;
 
 /* Number of times to run the loop */
-Program.global.NUMLOOPS = 10;  // was 100
+Program.global.NUMLOOPS = 100;  // was 100
 
 /* Initial task in system.  It is set at high priority for messageq_multi.c*/
 var params = new Task.Params;

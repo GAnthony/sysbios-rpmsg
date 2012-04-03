@@ -170,7 +170,7 @@ Void tsk1_func(UArg arg0, UArg arg1)
     do {
         status = MessageQ_open(HOST_MESSAGEQNAME, &remoteQueueId);
         /* 1 second sleep: */
-        Task_sleep(10000);
+        Task_sleep(1000);
     }
     while (status != MessageQ_S_SUCCESS);
 
