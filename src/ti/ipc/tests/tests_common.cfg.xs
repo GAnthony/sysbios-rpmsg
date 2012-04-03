@@ -140,9 +140,11 @@ Program.global.HEAP_NUMMSGS =    256; // Worst case: # recv msgs in vring
 Program.global.HEAPID       =     0;
 
 /* Number of times to run the loop */
-Program.global.NUMLOOPS = 100;  // was 100
+Program.global.NUMLOOPS = 10;  // was 100
 
-/* Task that does the notify sending */
-Program.global.tsk1 = Task.create('&tsk1_func');
-Program.global.tsk1.instance.name = "tsk1";
+/* Initial task in system.  It is set at high priority for messageq_multi.c*/
+var params = new Task.Params;
+params.instance.name = "tsk0";
+params.priority = 5;
+Program.global.tsk1 = Task.create('&tsk1_func', params);
 
