@@ -123,6 +123,5 @@ See the README there for build/load/test instructions.
 
 Current Constraints:
 * This is currently *not* compatible with MessageQCopy;
-* No NameServer transport, so host Queue Index is assumed to be zero.
 * Only sends to a MessageQ endpoint on Linux side at rpmsg chnl = 1024.
 
