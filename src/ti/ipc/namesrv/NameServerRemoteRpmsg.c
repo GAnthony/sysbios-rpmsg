@@ -172,8 +172,6 @@ Int NameServerRemoteRpmsg_get(NameServerRemoteRpmsg_Object *obj,
 
     GateMutex_Handle gateMutex = NameServerRemoteRpmsg_module->gateMutex;
 
-    Log_print1(Diags_INFO, FXNN": name: %s", (IArg)name);
-
     /* enter gate - prevent multiple threads from entering */
     key = GateMutex_enter(gateMutex);
 
@@ -182,6 +180,8 @@ Int NameServerRemoteRpmsg_get(NameServerRemoteRpmsg_Object *obj,
         status = NameServer_E_RESOURCE;
         goto exit;
     }
+
+    Log_print1(Diags_INFO, FXNN": name: %s", (IArg)name);
 
     /* Create request message and send to remote processor: */
     msg.request = NameServerRemoteRpmsg_REQUEST;
