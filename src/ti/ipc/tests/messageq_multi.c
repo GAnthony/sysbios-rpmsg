@@ -149,7 +149,7 @@ Void tsk1_func(UArg arg0, UArg arg1)
     myIpcAttach(procId);
 
     /* Wait for end of test: */
-    while (numTests <= NUMLOOPS * NUMTHREADS) {
+    while (numTests < NUMLOOPS * NUMTHREADS) {
         Task_sleep(10000);
     }
 
