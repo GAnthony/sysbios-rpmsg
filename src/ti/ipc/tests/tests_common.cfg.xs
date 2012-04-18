@@ -88,7 +88,7 @@ var LoggerSysParams = new LoggerSys.Params();
 Defaults.common$.logger = LoggerSys.create(LoggerSysParams);
 
 nsRemote.common$.diags_ENTRY = Diags.ALWAYS_OFF;
-nsRemote.common$.diags_INFO  = Diags.ALWAYS_ON;
+nsRemote.common$.diags_INFO  = Diags.ALWAYS_OFF;
 nsRemote.common$.diags_EXIT  = Diags.ALWAYS_OFF;
 
 /* Enable runtime Diags_setMask() for non-XDC spec'd modules: */
@@ -107,7 +107,7 @@ MessageQ.common$.diags_USER1= Diags.ALWAYS_OFF;
 var TransportVirtio = xdc.useModule('ti.ipc.transports.TransportVirtio');
 TransportVirtio.common$.diags_ENTRY = Diags.ALWAYS_OFF;
 TransportVirtio.common$.diags_EXIT  = Diags.ALWAYS_OFF;
-TransportVirtio.common$.diags_INFO  = Diags.ALWAYS_ON;
+TransportVirtio.common$.diags_INFO  = Diags.ALWAYS_OFF;
 TransportVirtio.common$.diags_STATUS = Diags.ALWAYS_OFF;
 
 var VirtQueue = xdc.useModule('ti.ipc.family.omap4430.VirtQueue');
