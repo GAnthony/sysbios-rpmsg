@@ -141,6 +141,9 @@ extern "C" {
  */
 typedef struct MessageQCopy_Object *MessageQCopy_Handle;
 
+
+typedef Void (*MessageQCopy_callback)(MessageQCopy_Handle, Ptr, UInt16, UInt32);
+
 /* =============================================================================
  *  MessageQCopy Functions:
  * =============================================================================
@@ -174,6 +177,8 @@ Void MessageQCopy_finalize();
  *                            any Endpoint can be assigned; otherwise, value is
  *                            a reserved Endpoint ID, which must be less than
  *                            or equal to MessageQCopy_MAX_RESERVED_ENDPOINT.
+ *  @param[in]   callback     If non-NULL, on received data, this callback is
+ *                            called instead of posting the internal semaphore.
  *  @param[out]  endpoint     Endpoint ID for this side of the connection.
  *
  *
@@ -181,8 +186,9 @@ Void MessageQCopy_finalize();
  *                            - reserved endpoint already taken;
  *                            - could not allocate object
  */
-MessageQCopy_Handle MessageQCopy_create(UInt32 reserved, UInt32 * endpoint);
-
+MessageQCopy_Handle MessageQCopy_create(UInt32 reserved,
+                                        MessageQCopy_callback callback,
+                                        UInt32 * endpoint);
 /*!
  *  @brief      Receives a message from a message queue
  *

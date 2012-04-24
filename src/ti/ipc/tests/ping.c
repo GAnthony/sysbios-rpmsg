@@ -30,9 +30,9 @@
  * EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 /*
- *  ======== ping_tasks.c ========
+ *  ======== ping.c ========
  *
- *  Works with the rpmsg_client_sample and rpmsg_server_sample Linux drivers.
+ *  Works with the rpmsg_proto_bench Linux sample over rpmsg-proto socket.
  */
 
 #include <xdc/std.h>
@@ -47,64 +47,66 @@
 #include <string.h>
 #include <stdlib.h>
 
-#include <ti/ipc/rpmsg/MessageQCopy.h>
+#include <ti/ipc/rpmsg/VirtQueue.h>
 #include <ti/srvmgr/NameMap.h>
-#include <ti/resmgr/IpcResource.h>
+#include <ti/ipc/rpmsg/MessageQCopy.h>
 
-#define APP_NUM_ITERATIONS 100000
 
-Void copyTaskFxn(UArg arg0, UArg arg1)
+static UInt16 dstProc;
+static MessageQCopy_Handle handle = NULL;
+static UInt32 myEndpoint = 0;
+static UInt32 counter = 0;
+
+/* Send me a zero length data payload to tear down the MesssageQCopy object: */
+static Void pingCallbackFxn(MessageQCopy_Handle h, Ptr data, 
+	UInt16 len, UInt32 src)
 {
-    MessageQCopy_Handle    handle;
     Char                   buffer[128];
-    UInt32                 myEndpoint = 0;
-    UInt32                 remoteEndpoint;
-    UInt16                 dstProc;
-    UInt16                 len;
-    Int                    i;
-    Char                   *name;
 
-    System_printf("copyTask %d: Entered...:\n", arg0);
+    memcpy(buffer, data, len);
+    buffer[len] = '\0';
+    System_printf("%d: Received data: %s, len:%d\n", counter++, buffer, len);
+
+    /* Send data back to remote endpoint: */
+    MessageQCopy_send(dstProc, src, myEndpoint, (Ptr)buffer, len);
+}
+
+Void pingTaskFxn(UArg arg0, UArg arg1)
+{
+    System_printf("ping_task at port %d: Entered...\n", arg0);
+
+    NameMap_register("rpmsg-proto", arg0);
 
     dstProc = MultiProc_getId("HOST");
 
-    /* Create the messageQ for receiving (and get our endpoint for sending). */
-    handle = MessageQCopy_create(arg0, NULL, &myEndpoint);
-
-    name = arg0 == 50 ? "rpmsg-client-sample" : "rpmsg-proto";
-    NameMap_register(name, arg0);
-
-    for (i = 0; i < APP_NUM_ITERATIONS; i++) {
-       /* Await a character message: */
-       MessageQCopy_recv(handle, (Ptr)buffer, &len, &remoteEndpoint,
-                         MessageQCopy_FOREVER);
-
-       buffer[len] = '\0';
-       System_printf("copyTask %d: Received data: %s, len:%d\n", i + 1,
-                      buffer, len);
-
-       /* Send data back to remote endpoint: */
-       MessageQCopy_send(dstProc, remoteEndpoint, myEndpoint, (Ptr)buffer, len);
+    /* Create the messageQ for receiving, and register callback: */
+    handle = MessageQCopy_create(arg0, pingCallbackFxn, &myEndpoint);
+    if (!handle) {
+        System_abort("MessageQCopy_create failed\n");        
     }
 
-    /* Teardown our side: */
-    MessageQCopy_delete(&handle);
+    /* Note: we never teardown with MessageQCopy_destroy() */
 }
 
-void start_ping_tasks()
+typedef UInt32 u32;
+#include <ti/resources/rsc_table.h>
+
+Int main(Int argc, char* argv[])
 {
-    Task_Params params;
+    UInt16 dstProc;
 
-    /* Respond to ping tests from Linux side rpmsg sample drivers: */
-    Task_Params_init(&params);
-    params.instance->name = "copy0";
-    params.priority = 3;
-    params.arg0 = 50;
-    Task_create(copyTaskFxn, &params, NULL);
+    System_printf("%s starting..\n", MultiProc_getName(MultiProc_self()));
 
-    Task_Params_init(&params);
-    params.instance->name = "copy1";
-    params.priority = 3;
-    params.arg0 = 51;
-    Task_create(copyTaskFxn, &params, NULL);
+    System_printf("%d resources at 0x%x\n",
+                  sizeof(resources) / sizeof(struct resource), resources);
+
+    /* Plug vring interrupts, and spin until host handshake complete. */
+    VirtQueue_startup(0);
+
+    dstProc = MultiProc_getId("HOST");
+    MessageQCopy_init(dstProc);
+
+    BIOS_start();
+
+    return (0);
 }

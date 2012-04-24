@@ -302,7 +302,7 @@ void serviceMgrTaskFxn(UArg arg0, UArg arg1)
     dstProc = MultiProc_getId("HOST");
 #endif
 
-    msgq = MessageQCopy_create(SERVICE_MGR_PORT, &local);
+    msgq = MessageQCopy_create(SERVICE_MGR_PORT, NULL, &local);
 
     System_printf("serviceMgr: started on port: %d\n", SERVICE_MGR_PORT);
 

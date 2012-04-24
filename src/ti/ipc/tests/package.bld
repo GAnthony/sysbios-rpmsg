@@ -56,6 +56,7 @@ Pkg.attrs.exportAll = true;
  */
 
 var testArray = [
+    {name: 'ping', buildPlatforms: ["ti.platform.omap4430.core0"]},
     {name: 'messageq_multi', copts: "-D BENCHMARK", buildPlatforms: ["ti.platform.omap4430.core0"]},
     {name: 'messageq_socket', buildPlatforms: ["ti.platform.omap4430.core0"]},
     {name: 'messageq_bench', sources: ["messageq_socket.c"], copts: "-D BENCHMARK", buildPlatforms: ["ti.platform.omap4430.core0"]},

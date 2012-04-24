@@ -753,7 +753,7 @@ Int RcmServer_Instance_init_P(RcmServer_Object *obj, String name,
 
     /* create the message queue for inbound messages */
 #if USE_MESSAGEQCOPY
-    obj->serverQue = MessageQCopy_create(MessageQCopy_ASSIGN_ANY,
+    obj->serverQue = MessageQCopy_create(MessageQCopy_ASSIGN_ANY, NULL,
                                          &obj->localAddr);
 #ifdef BIOS_ONLY_TEST
     obj->dstProc = MultiProc_self();
