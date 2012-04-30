@@ -62,7 +62,6 @@ Int TransportVirtioSetup_attach(UInt16 remoteProcId, Ptr sharedAddr)
 
     /* init the transport parameters */
     TransportVirtio_Params_init(&params);
-    params.intVectorId     = TransportVirtioSetup_dspIntVectId;
     params.sharedAddr = sharedAddr;  /* Not used yet */
 
     handle = TransportVirtio_create(remoteProcId, &params, &eb);

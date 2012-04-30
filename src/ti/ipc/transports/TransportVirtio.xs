@@ -36,7 +36,6 @@
 var TransportVirtio  = null;
 var MessageQ         = null;
 var MultiProc        = null;
-var Swi              = null;
 var TransportVirtioSetup   = null;
 
 /*
@@ -47,11 +46,11 @@ function module$use()
     TransportVirtio = this;
     MultiProc       = xdc.useModule("ti.sdo.utils.MultiProc");
     MessageQ        = xdc.useModule("ti.sdo.ipc.MessageQ");
-    Swi             = xdc.useModule("ti.sysbios.knl.Swi");
-    VirtQueue       = xdc.useModule("ti.ipc.family.omap4430.VirtQueue");
+//    VirtQueue       = xdc.useModule("ti.ipc.family.omap4430.VirtQueue");
     TransportVirtioSetup = xdc.useModule("ti.ipc.transports.TransportVirtioSetup");
     xdc.loadPackage("ti.ipc.family.omap4430");
     xdc.loadPackage("ti.ipc.namesrv");
+    xdc.loadPackage("ti.ipc.rpmsg");
 }
 /*
  *  ======== module$static$init ========
@@ -59,7 +58,6 @@ function module$use()
 function module$static$init(mod, params)
 {
   /* Init Virtio Transport params */
-  mod.gateSwiHandle = null;
 }
 
 

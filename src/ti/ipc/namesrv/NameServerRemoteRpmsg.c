@@ -49,6 +49,7 @@
 #include <ti/ipc/MultiProc.h>
 #include <ti/ipc/namesrv/_NameServerRemoteRpmsg.h>
 #include <ti/ipc/rpmsg/rpmsg.h>
+#include <ti/ipc/rpmsg/MessageQCopy.h>
 #include <ti/ipc/transports/_TransportVirtio.h>
 
 #include "package/internal/NameServerRemoteRpmsg.xdc.h"
@@ -197,7 +198,7 @@ Int NameServerRemoteRpmsg_get(NameServerRemoteRpmsg_Object *obj,
 
     Log_print3(Diags_INFO, FXNN": Requesting from procId %d, %s:%s...\n",
                obj->remoteProcId, (IArg)msg.instanceName, (IArg)msg.name);
-    sendRpmsg(obj->remoteProcId, NameServerRemoteRpmsg_module->ns_port,
+    MessageQCopy_send(obj->remoteProcId, NameServerRemoteRpmsg_module->ns_port,
                RPMSG_MESSAGEQ_PORT, (Ptr)&msg, sizeof(msg));
 
     /* Now pend for response */
@@ -206,7 +207,8 @@ Int NameServerRemoteRpmsg_get(NameServerRemoteRpmsg_Object *obj,
     if (status == FALSE) {
         Log_print0(Diags_INFO, FXNN": Wait for NS reply timed out\n");
         /* return timeout failure */
-        return (NameServer_E_OSFAILURE);
+        status = NameServer_E_OSFAILURE;
+        goto exit;
     }
 
     /* get the message */
@@ -294,7 +296,7 @@ void NameServerRemote_processMessage(NameServerMsg * msg)
         msg->request = NameServerRemoteRpmsg_RESPONSE;
 
         /* send response message to remote processor */
-        sendRpmsg(dstProc, NameServerRemoteRpmsg_module->ns_port,
+        MessageQCopy_send(dstProc, NameServerRemoteRpmsg_module->ns_port,
                  RPMSG_MESSAGEQ_PORT, (Ptr)msg, sizeof(NameServerMsg));
     }
     else {

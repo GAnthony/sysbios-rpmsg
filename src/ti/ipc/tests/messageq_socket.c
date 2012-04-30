@@ -58,6 +58,10 @@
 #include <ti/ipc/rpmsg/rpmsg.h>
 #include <ti/ipc/transports/_TransportVirtio.h>
 
+/* TBD: these need to be hidden in a Module_startup fxn or the transport: */
+#include <ti/ipc/rpmsg/VirtQueue.h>
+#include <ti/ipc/rpmsg/MessageQCopy.h>
+
 /*  ----------------------------------- BIOS6 module Headers         */
 #include <ti/sysbios/BIOS.h>
 #include <ti/sysbios/knl/Task.h>
@@ -69,18 +73,6 @@
 typedef unsigned int u32;
 #include <ti/resources/rsc_table.h>
 
-
-void myNameMap_register(Char * name, UInt32 port)
-{
-    System_printf("registering %s service on %d with HOST\n", name, port);
-    nameService_register(name, port, RPMSG_NS_CREATE);
-}
-
-void myNameMap_unregister(Char * name, UInt32 port)
-{
-    System_printf("unregistering %s service on %d with HOST\n", name, port);
-    nameService_register(name, port, RPMSG_NS_DESTROY);
-}
 
 /*
  * This to get TransportVirtio_attach() and NameServerRemoteRpmsg_attach()
@@ -99,16 +91,6 @@ void myIpcAttach(UInt procId)
     /* call NameServer_attach to remote processor */
     status = ti_sdo_utils_NameServer_SetupProxy_attach(procId, 0);
     Assert_isTrue(status >= 0, NULL);
-
-    /*
-     * Tell the Linux host we have a MessageQ service over rpmsg.
-     *
-     * TBD: This should be in the VirtioTransport initialization, but we need
-     * an interrupt handshake after BIOS_start().
-     * TBD: Also, NameMap should go over a bare rpmsg API, rather than
-     * MessageQCopy, as this clashes with MessageQ.
-     */
-    myNameMap_register("rpmsg-proto", RPMSG_MESSAGEQ_PORT);
 }
 
 /*
@@ -126,15 +108,6 @@ void myIpcDetach(UInt procId)
     /* call NameServer_detach from remote processor */
     status = ti_sdo_utils_NameServer_SetupProxy_detach(procId);
     Assert_isTrue(status >= 0, NULL);
-
-    /*
-     * Tell the host MessageQ service over rpmsg is going away.
-     *
-     * TBD: This should be in the VirtioTransport module.
-     * Also, NameMap should go over a bare rpmsg API, rather than
-     * MessageQCopy, as this clashes with MessageQ.
-     */
-    myNameMap_unregister("rpmsg-proto", RPMSG_MESSAGEQ_PORT);
 }
 
 /*
@@ -219,12 +192,21 @@ Int main(Int argc, Char* argv[])
     Ptr                    buf;
     HeapBuf_Handle         heapHandle;
     HeapBuf_Params         heapBufParams;
+    UInt16                 dstProc;
+
+    System_printf("%s starting..\n", MultiProc_getName(MultiProc_self()));
 
     System_printf("%d resources at 0x%x\n",
                   sizeof(resources) / sizeof(struct resource), resources);
 
     /* Initialize the Error_Block. This is required before using it */
     Error_init(&eb);
+
+    /* Plug vring interrupts, and spin until host handshake complete. */
+    VirtQueue_startup(0);
+
+    dstProc = MultiProc_getId("HOST");
+    MessageQCopy_init(dstProc);
 
     System_printf("main: MultiProc id = %d\n", MultiProc_self());
 

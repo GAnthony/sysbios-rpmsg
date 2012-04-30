@@ -43,9 +43,6 @@
 module TransportVirtioSetup inherits ti.sdo.ipc.interfaces.ITransportSetup
 {
 
-    /* The interrupt vector id */
-    config UInt dspIntVectId = 0;  /* Used where interrupts used vs mailboxes */
-
 internal:
 
     /* Module Status object */
