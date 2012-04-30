@@ -69,7 +69,7 @@ Void copyTaskFxn(UArg arg0, UArg arg1)
     dstProc = MultiProc_getId("HOST");
 
     /* Create the messageQ for receiving (and get our endpoint for sending). */
-    handle = MessageQCopy_create(arg0, NULL, &myEndpoint);
+    handle = MessageQCopy_create(arg0, &myEndpoint);
 
     name = arg0 == 50 ? "rpmsg-client-sample" : "rpmsg-proto";
     NameMap_register(name, arg0);

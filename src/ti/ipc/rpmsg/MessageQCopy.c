@@ -79,6 +79,7 @@ typedef struct MessageQCopy_Object {
     UInt32           queueId;      /* Unique id (procId | queueIndex)       */
     Semaphore_Handle semHandle;    /* I/O Completion                        */
     MessageQCopy_callback cb;      /* MessageQ Callback */
+    UArg             arg;          /* Callback argument */
     List_Handle      queue;        /* Queue of pending messages             */
     Bool             unblocked;    /* Use with signal to unblock _receive() */
 } MessageQCopy_Object;
@@ -284,9 +285,19 @@ Void MessageQCopy_finalize()
 /*
  *  ======== MessageQCopy_create ========
  */
-#define FXNN "MessageQCopy_create"
 MessageQCopy_Handle MessageQCopy_create(UInt32 reserved,
+                                        UInt32 * endpoint)
+{
+    return (MessageQCopy_createEx(reserved, NULL, NULL, endpoint));
+}
+
+/*
+ *  ======== MessageQCopy_createEx ========
+ */
+#define FXNN "MessageQCopy_createEx"
+MessageQCopy_Handle MessageQCopy_createEx(UInt32 reserved,
                                         MessageQCopy_callback cb,
+                                        UArg arg,
                                         UInt32 * endpoint)
 {
     MessageQCopy_Object    *obj = NULL;
@@ -323,8 +334,9 @@ MessageQCopy_Handle MessageQCopy_create(UInt32 reserved,
        obj = Memory_alloc(NULL, sizeof(MessageQCopy_Object), 0, NULL);
        if (obj != NULL) {
            if (cb) {
-               /* Store callback to call instead of posting semaphore: */
+               /* Store callback and it's arg instead of semaphore: */
                obj->cb = cb;
+               obj->arg= arg;
            }
            else {
                /* Allocate a semaphore to signal when messages received: */
@@ -373,6 +385,7 @@ Int MessageQCopy_delete(MessageQCopy_Handle *handlePtr)
 
        if (obj->cb) {
            obj->cb = NULL;
+           obj->arg= NULL;
        }
        else {
            Semaphore_delete(&(obj->semHandle));
@@ -527,7 +540,7 @@ Int MessageQCopy_send(UInt16 dstProc,
         if (obj->cb) {
             Log_print2(Diags_INFO, FXNN": calling callback with data len: "
                             "%d, from: %d\n", len, srcEndpt);
-            obj->cb(obj, data, len, srcEndpt);
+            obj->cb(obj, obj->arg, data, len, srcEndpt);
         }
         else {
             /* else, put on a Message queue on this processor: */

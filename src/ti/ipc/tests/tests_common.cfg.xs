@@ -63,8 +63,10 @@ NameServer    = xdc.useModule("ti.sdo.utils.NameServer");
 var nsRemote = xdc.useModule("ti.ipc.namesrv.NameServerRemoteRpmsg");
 NameServer.SetupProxy = nsRemote;
 
+xdc.loadPackage('ti.ipc.rpmsg');
+xdc.loadPackage('ti.srvmgr');  /* for NameMap */
 xdc.loadPackage('ti.ipc.namesrv');
-xdc.loadPackage('ti.ipc.family.omap4430');
+//xdc.loadPackage('ti.ipc.family.omap4430');
 
 /* Reduces code size, by only pulling in modules explicitly referenced: */
 BIOS.libType    = BIOS.LibType_Custom;
@@ -95,11 +97,11 @@ nsRemote.common$.diags_EXIT  = Diags.ALWAYS_OFF;
 var Text = xdc.useModule('xdc.runtime.Text');
 Text.isLoaded = true;
 var Registry = xdc.useModule('xdc.runtime.Registry');
-Registry.common$.diags_ENTRY = Diags.RUNTIME_ON;
-Registry.common$.diags_EXIT  = Diags.RUNTIME_ON;
-Registry.common$.diags_INFO  = Diags.RUNTIME_ON;
-Registry.common$.diags_STATUS = Diags.RUNTIME_ON;
-Registry.common$.diags_USER1 = Diags.RUNTIME_ON;
+Registry.common$.diags_ENTRY = Diags.RUNTIME_OFF;
+Registry.common$.diags_EXIT  = Diags.RUNTIME_OFF;
+Registry.common$.diags_INFO  = Diags.RUNTIME_OFF;
+Registry.common$.diags_STATUS = Diags.RUNTIME_OFF;
+Registry.common$.diags_USER1 = Diags.RUNTIME_OFF;
 Diags.setMaskEnabled = true;
 
 MessageQ.common$.diags_USER1= Diags.ALWAYS_OFF;
@@ -110,18 +112,18 @@ TransportVirtio.common$.diags_EXIT  = Diags.ALWAYS_OFF;
 TransportVirtio.common$.diags_INFO  = Diags.ALWAYS_OFF;
 TransportVirtio.common$.diags_STATUS = Diags.ALWAYS_OFF;
 
-var VirtQueue = xdc.useModule('ti.ipc.family.omap4430.VirtQueue');
-VirtQueue.common$.diags_ENTRY = Diags.ALWAYS_OFF;
-VirtQueue.common$.diags_EXIT  = Diags.ALWAYS_OFF;
-VirtQueue.common$.diags_USER1 = Diags.ALWAYS_OFF;
+//var VirtQueue = xdc.useModule('ti.ipc.family.omap4430.VirtQueue');
+//VirtQueue.common$.diags_ENTRY = Diags.ALWAYS_OFF;
+//VirtQueue.common$.diags_EXIT  = Diags.ALWAYS_OFF;
+//VirtQueue.common$.diags_USER1 = Diags.ALWAYS_OFF;
 
-var InterruptM3 = xdc.useModule('ti.ipc.family.omap4430.InterruptM3');
-InterruptM3.common$.diags_ENTRY = Diags.ALWAYS_OFF;
-InterruptM3.common$.diags_EXIT  = Diags.ALWAYS_OFF;
-InterruptM3.common$.diags_USER1 = Diags.ALWAYS_OFF;
+//var InterruptM3 = xdc.useModule('ti.ipc.family.omap4430.InterruptM3');
+//InterruptM3.common$.diags_ENTRY = Diags.ALWAYS_OFF;
+//InterruptM3.common$.diags_EXIT  = Diags.ALWAYS_OFF;
+//InterruptM3.common$.diags_USER1 = Diags.ALWAYS_OFF;
 
 var Main = xdc.useModule('xdc.runtime.Main');
-Main.common$.diags_ASSERT = Diags.ALWAYS_OFF;
+Main.common$.diags_ASSERT = Diags.ALWAYS_ON;
 Main.common$.diags_INTERNAL = Diags.ALWAYS_OFF;
 Main.common$.diags_USER1 = Diags.ALWAYS_OFF;
 

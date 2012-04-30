@@ -58,7 +58,7 @@ static UInt32 myEndpoint = 0;
 static UInt32 counter = 0;
 
 /* Send me a zero length data payload to tear down the MesssageQCopy object: */
-static Void pingCallbackFxn(MessageQCopy_Handle h, Ptr data, 
+static Void pingCallbackFxn(MessageQCopy_Handle h, UArg arg, Ptr data,
 	UInt16 len, UInt32 src)
 {
     Char                   buffer[128];
@@ -75,15 +75,14 @@ Void pingTaskFxn(UArg arg0, UArg arg1)
 {
     System_printf("ping_task at port %d: Entered...\n", arg0);
 
-    NameMap_register("rpmsg-proto", arg0);
-
-    dstProc = MultiProc_getId("HOST");
-
     /* Create the messageQ for receiving, and register callback: */
-    handle = MessageQCopy_create(arg0, pingCallbackFxn, &myEndpoint);
+    handle = MessageQCopy_createEx(arg0, pingCallbackFxn, NULL, &myEndpoint);
     if (!handle) {
-        System_abort("MessageQCopy_create failed\n");        
+        System_abort("MessageQCopy_createEx failed\n");
     }
+
+    /* Announce we are here: */
+    NameMap_register("rpmsg-proto", arg0);
 
     /* Note: we never teardown with MessageQCopy_destroy() */
 }
@@ -93,7 +92,6 @@ typedef UInt32 u32;
 
 Int main(Int argc, char* argv[])
 {
-    UInt16 dstProc;
 
     System_printf("%s starting..\n", MultiProc_getName(MultiProc_self()));
 
