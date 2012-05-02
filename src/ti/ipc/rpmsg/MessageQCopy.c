@@ -283,18 +283,9 @@ Void MessageQCopy_finalize()
 #undef FXNN
 
 /*
- *  ======== MessageQCopy_create ========
- */
-MessageQCopy_Handle MessageQCopy_create(UInt32 reserved,
-                                        UInt32 * endpoint)
-{
-    return (MessageQCopy_createEx(reserved, NULL, NULL, endpoint));
-}
-
-/*
  *  ======== MessageQCopy_createEx ========
  */
-#define FXNN "MessageQCopy_createEx"
+#define FXNN "MessageQCopy_create"
 MessageQCopy_Handle MessageQCopy_createEx(UInt32 reserved,
                                         MessageQCopy_callback cb,
                                         UArg arg,
@@ -306,8 +297,8 @@ MessageQCopy_Handle MessageQCopy_createEx(UInt32 reserved,
     UInt16                 queueIndex = 0;
     IArg key;
 
-    Log_print2(Diags_ENTRY, "--> "FXNN": (reserved=%d, endpoint=0x%x)",
-                (IArg)reserved, (IArg)endpoint);
+    Log_print3(Diags_ENTRY, "--> "FXNN": (reserved=%d, cb=0x%x, endpoint=0x%x)",
+                (IArg)reserved, (IArg)cb, (IArg)endpoint);
 
     Assert_isTrue((curInit > 0) , NULL);
 

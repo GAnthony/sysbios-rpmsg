@@ -185,8 +185,9 @@ Void MessageQCopy_finalize();
  *                            - reserved endpoint already taken;
  *                            - could not allocate object
  */
-MessageQCopy_Handle MessageQCopy_create(UInt32 reserved,
-                                        UInt32 * endpoint);
+#define MessageQCopy_create(reserved, endpoint)\
+        MessageQCopy_createEx(reserved, NULL, NULL, endpoint)
+
 /*!
  *  @brief      Create a MessageQ instance for receiving, with callback.
  *
