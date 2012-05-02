@@ -50,6 +50,10 @@ typedef struct NameServerMsg {
 
 #define NAMESERVER_MSG_TOKEN   0x5678abcd
 
+/* That special per processor RPMSG channel reserved to multiplex MessageQ */
+/* Duplicated in _TransportVirtio.h: move to a common rpmsg_ports.h? */
+#define RPMSG_MESSAGEQ_PORT         61
+
 extern void NameServerRemote_processMessage(NameServerMsg * ns_msg);
 extern void NameServerRemote_SetNameServerPort(UInt port);
 

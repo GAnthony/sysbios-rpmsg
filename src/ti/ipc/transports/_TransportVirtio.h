@@ -31,10 +31,4 @@
  */
 
 #define RPMSG_MESSAGEQ_PORT         61
-#define NAME_SERVER_RPMSG_ADDR      0
-
-extern void nameService_register(UInt16 dstProc, char * name, UInt32 port,
-              enum rpmsg_ns_flags);
-extern void sendRpmsg(UInt16 dstProc, UInt32 dstEndpt, UInt32 srcEndpt,
-              Ptr data, UInt16 len);
 

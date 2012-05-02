@@ -79,7 +79,7 @@ static Void transportCallbackFxn(MessageQCopy_Handle msgq, UArg arg, Ptr data,
 
 /*  --------------  TEMP NameService over rpmsg ----------------------- */
 
-void nameService_register(UInt16 dstProc, char * name, UInt32 port, enum rpmsg_ns_flags flags)
+static void nameService_register(UInt16 dstProc, char * name, UInt32 port, enum rpmsg_ns_flags flags)
 {
     struct rpmsg_ns_msg nsMsg;
     UInt16 len      = sizeof(nsMsg);

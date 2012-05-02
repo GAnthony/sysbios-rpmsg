@@ -48,9 +48,7 @@
 #include <ti/sdo/utils/INameServerRemote.h>
 #include <ti/ipc/MultiProc.h>
 #include <ti/ipc/namesrv/_NameServerRemoteRpmsg.h>
-#include <ti/ipc/rpmsg/rpmsg.h>
 #include <ti/ipc/rpmsg/MessageQCopy.h>
-#include <ti/ipc/transports/_TransportVirtio.h>
 
 #include "package/internal/NameServerRemoteRpmsg.xdc.h"
 
