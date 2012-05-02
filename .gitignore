@@ -8,6 +8,13 @@ Make.log
 .imports
 .imports.xml
 .tools-*
+.bin-files,cmds
+.etc-files
+.gitignore.swp
+.include-files
+.lib-files
+.src-files
+.test-files
 *~
 bios_6_32_01_38/*
 cgt6x-7.2.0/*
@@ -16,3 +23,6 @@ ipc_1_23_01_26/*
 xdctools_3_22_01_21/*
 src/ti/ipc/transports/TransportVirtio.h
 src/ti/ipc/transports/TransportVirtioSetup.h
+src/ti/ipc/family/omap4430/InterruptM3.h
+src/ti/ipc/family/omap4430/VirtQueue.h
+src/ti/ipc/namesrv/NameServerRemoteRpmsg.h
