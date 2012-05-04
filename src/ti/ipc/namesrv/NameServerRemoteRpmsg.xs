@@ -56,7 +56,7 @@ function module$use()
  */
 function module$static$init(mod, params)
 {
-    mod.nsMsg= null;
+    mod.nsMsg = null;
 
     /* calculate the timeout value */
     if (NameServerRemoteRpmsg.timeoutInMicroSecs != ~(0)) {
@@ -75,6 +75,6 @@ function module$static$init(mod, params)
     mod.gateMutex = GateMutex.create();
 
     /* Will initialize correctly during TransportVirtio swiFxn ns announce */
-    mod.ns_port = (-1);
+    mod.nsPort = (-1);
 }
 

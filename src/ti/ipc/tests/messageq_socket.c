@@ -55,7 +55,7 @@
 #include <ti/ipc/MessageQ.h>
 #include <ti/ipc/MultiProc.h>
 #include <ti/ipc/transports/TransportVirtioSetup.h>
-#include <ti/ipc/rpmsg/rpmsg.h>
+#include <ti/ipc/rpmsg/Rpmsg.h>
 #include <ti/ipc/transports/_TransportVirtio.h>
 
 /*  ----------------------------------- BIOS6 module Headers         */
@@ -138,10 +138,10 @@ void myIpcDetach(UInt procId)
 }
 
 /*
- *  ======== tsk1_func ========
+ *  ======== tsk1Fxn ========
  *  Receive and return messages
  */
-Void tsk1_func(UArg arg0, UArg arg1)
+Void tsk1Fxn(UArg arg0, UArg arg1)
 {
     MessageQ_Msg     getMsg;
     MessageQ_Handle  messageQ;
@@ -150,7 +150,7 @@ Void tsk1_func(UArg arg0, UArg arg1)
     UInt16           msgId = 0;
     UInt             procId = MultiProc_getId("HOST");
 
-    System_printf("tsk1_func: In tsk1_func.\n");
+    System_printf("tsk1Fxn: In tsk1Fxn.\n");
 
     /* Get our Transport loaded in absence of Ipc module: */
     myIpcAttach(procId);
@@ -162,11 +162,11 @@ Void tsk1_func(UArg arg0, UArg arg1)
     }
 
     remoteQueueId = MessageQ_getQueueId(messageQ);
-    System_printf("tsk1_func: created MessageQ: %s; QueueID: 0x%x\n",
+    System_printf("tsk1Fxn: created MessageQ: %s; QueueID: 0x%x\n",
 	SLAVE_MESSAGEQNAME, MessageQ_getQueueId(messageQ));
 
     /* Open the remote message queue. Spin until it is ready. */
-    System_printf("tsk1_func: Calling MessageQ_open...\n");
+    System_printf("tsk1Fxn: Calling MessageQ_open...\n");
     do {
         status = MessageQ_open(HOST_MESSAGEQNAME, &remoteQueueId);
         /* 1 second sleep: */
@@ -174,7 +174,7 @@ Void tsk1_func(UArg arg0, UArg arg1)
     }
     while (status != MessageQ_S_SUCCESS);
 
-    System_printf("tsk1_func: Remote MessageQ %s; QueueID: 0x%x\n",
+    System_printf("tsk1Fxn: Remote MessageQ %s; QueueID: 0x%x\n",
 	HOST_MESSAGEQNAME, remoteQueueId);
 
     System_printf("Start the main loop\n");
@@ -228,6 +228,9 @@ Int main(Int argc, Char* argv[])
     System_printf("main: MultiProc id = %d\n", MultiProc_self());
 
     buf = Memory_alloc(0, (HEAP_NUMMSGS * HEAP_MSGSIZE) + HEAP_ALIGN, 8, &eb);
+    if (buf == NULL) {
+        System_abort("Memory_alloc failed\n" );
+    }
 
     /*
      *  Create the heap that will be used to allocate messages.

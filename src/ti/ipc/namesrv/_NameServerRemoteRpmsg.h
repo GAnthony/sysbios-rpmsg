@@ -31,11 +31,18 @@
  */
 
 
+#ifndef NameServerRemote__include
+#define NameServerRemote__include
+
+#if defined (__cplusplus)
+extern "C" {
+#endif
+
 #define MAXNAMEINCHAR   80
 #define NAMEARRAYSZIE   (((MAXNAMEINCHAR - 1) / sizeof(Bits32)) + 1)
 
 /* message sent to remote procId */
-typedef struct NameServerMsg {
+typedef struct NameServerRemote_Msg {
     Bits32  reserved;           /* reserved field: must be first!   */
     Bits32  value;              /* holds value                      */
     Bits32  request;            /* whether its a request/response   */
@@ -44,13 +51,16 @@ typedef struct NameServerMsg {
     Bits32  instanceName[NAMEARRAYSZIE];
                                 /* name of NameServer entry         */
     Bits32  name[NAMEARRAYSZIE];
-} NameServerMsg;
+} NameServerRemote_Msg;
 
 #define NAME_SERVER_RPMSG_ADDR  0
 
 #define NAMESERVER_MSG_TOKEN   0x5678abcd
 
-extern void NameServerRemote_processMessage(NameServerMsg * ns_msg);
+extern void NameServerRemote_processMessage(NameServerRemote_Msg * ns_msg);
 extern void NameServerRemote_SetNameServerPort(UInt port);
 
-
+#if defined (__cplusplus)
+}
+#endif /* defined (__cplusplus) */
+#endif /* NameServerRemote__include */

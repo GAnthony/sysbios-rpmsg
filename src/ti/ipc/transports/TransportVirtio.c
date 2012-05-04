@@ -87,7 +87,7 @@
 #include <ti/sdo/ipc/_MessageQ.h>
 
 #include <ti/ipc/rpmsg/virtio_ring.h>
-#include <ti/ipc/rpmsg/rpmsg.h>
+#include <ti/ipc/rpmsg/Rpmsg.h>
 /* TBD: VirtQueue.h needs to live in a common directory, not family specific.*/
 #include <ti/ipc/family/omap4430/VirtQueue.h>
 
@@ -100,10 +100,7 @@
 static VirtQueue_Handle vq_host;
 
 /* Maximum RPMSG payload: */
-#define MAX_PAYLOAD (VirtQueue_RP_MSG_BUF_SIZE - sizeof(RpMsg_Header))
-
-/* That special per processor RPMSG channel reserved to multiplex MessageQ */
-#define RPMSG_MESSAGEQ_PORT         61
+#define MAX_PAYLOAD (VirtQueue_RP_MSG_BUF_SIZE - sizeof(Rpmsg_Header))
 
 /* Addresses below this are assumed to be bound to MessageQ objects: */
 #define RPMSG_RESERVED_ADDRESSES     (1024)
@@ -171,12 +168,13 @@ static Void *getTxBuf(TransportVirtio_Object *obj, VirtQueue_Handle vq)
 
 /*  --------------  TEMP NameService over VirtQueue ----------------------- */
 
-void nameService_register(char * name, UInt32 port, enum rpmsg_ns_flags flags)
+void nameService_register(char * name, UInt32 port,
+                                 enum Rpmsg_nsFlags flags)
 {
-    struct rpmsg_ns_msg nsMsg;
+    struct Rpmsg_NsMsg nsMsg;
     UInt16 len      = sizeof(nsMsg);
     UInt16 dstProc  = MultiProc_getId("HOST");
-    UInt32 dstEndpt = NAMESERVICE_PORT;
+    UInt32 dstEndpt = RPMSG_NAMESERVICE_PORT;
     UInt32 srcEndpt = port;
     Ptr    data     = &nsMsg;
 
@@ -192,7 +190,7 @@ void sendRpmsg(UInt16 dstProc, UInt32 dstEndpt, UInt32 srcEndpt,
               Ptr data, UInt16 len)
 {
     Int16             token = 0;
-    RpMsg             msg;
+    Rpmsg_Msg             msg;
     IArg              key;
 
     if (dstProc != MultiProc_self()) {
@@ -353,15 +351,15 @@ Void TransportVirtio_Instance_finalize(TransportVirtio_Object *obj, Int status)
       Swi_destruct(Swi_struct(swiHandle));
     }
     
-   GateSwi_delete(&(TransportVirtio_module->gateSwiHandle));
+    GateSwi_delete(&(TransportVirtio_module->gateSwiHandle));
 
-   /* Delete the VirtQueue instance */
-   if (obj->isHost) {
+    /* Delete the VirtQueue instance */
+    if (obj->isHost) {
        VirtQueue_delete(obj->vq_slave);
-   }
-   else{
+    }
+    else{
        VirtQueue_delete(obj->vq_host);
-   }
+    }
 
     switch(status) {
         case 0: /* MessageQ_registerTransport succeeded */
@@ -395,7 +393,7 @@ Bool TransportVirtio_put(TransportVirtio_Object *obj, Ptr msg)
     UInt         msgSize;
     Int16        token = (-1);
     IArg         key;
-    RpMsg        rp_msg = NULL;
+    Rpmsg_Msg        rpMsg = NULL;
 
     Log_print1(Diags_ENTRY, "--> "FXNN": Entered: isHost: %d",
                  obj->isHost);
@@ -403,40 +401,40 @@ Bool TransportVirtio_put(TransportVirtio_Object *obj, Ptr msg)
     /* Send to remote processor: */
     key = GateSwi_enter(TransportVirtio_module->gateSwiHandle);  
     if (obj->isHost)  {
-       rp_msg = getTxBuf(obj, obj->vq_slave);
+       rpMsg = getTxBuf(obj, obj->vq_slave);
     }
     else {
-       token = VirtQueue_getAvailBuf(obj->vq_host, (Void **)&rp_msg);
+       token = VirtQueue_getAvailBuf(obj->vq_host, (Void **)&rpMsg);
     }
     GateSwi_leave(TransportVirtio_module->gateSwiHandle, key);
 
-    if ((obj->isHost && rp_msg) || token >= 0) {
+    if ((obj->isHost && rpMsg) || token >= 0) {
         /* Assert msg->msgSize <= vring's max fixed buffer size */
         msgSize = MessageQ_getMsgSize(msg);
 
         Assert_isTrue(msgSize <= MAX_PAYLOAD, NULL);
 
         /* Copy the payload and set message header: */
-        memcpy(rp_msg->payload, (Ptr)msg, msgSize);
-        rp_msg->dataLen  = msgSize;
-        rp_msg->dstAddr  = (((MessageQ_Msg)msg)->dstId & 0x0000FFFF);
-        rp_msg->srcAddr  = RPMSG_MESSAGEQ_PORT;
-        rp_msg->flags    = 0;
-        rp_msg->reserved = 0;
+        memcpy(rpMsg->payload, (Ptr)msg, msgSize);
+        rpMsg->dataLen  = msgSize;
+        rpMsg->dstAddr  = (((MessageQ_Msg)msg)->dstId & 0x0000FFFF);
+        rpMsg->srcAddr  = RPMSG_MESSAGEQ_PORT;
+        rpMsg->flags    = 0;
+        rpMsg->reserved = 0;
 
         /* free the app's message */
         if (((MessageQ_Msg)msg)->heapId != ti_sdo_ipc_MessageQ_STATICMSG) {
             MessageQ_free(msg);
         }
 
-        Log_print4(Diags_INFO, FXNN": sending rp_msg: 0x%x from: %d, "
+        Log_print4(Diags_INFO, FXNN": sending rpMsg: 0x%x from: %d, "
                    "to: %d, dataLen: %d",
-                  (IArg)rp_msg, (IArg)rp_msg->srcAddr, (IArg)rp_msg->dstAddr,
-                  (IArg)rp_msg->dataLen);
+                  (IArg)rpMsg, (IArg)rpMsg->srcAddr, (IArg)rpMsg->dstAddr,
+                  (IArg)rpMsg->dataLen);
 
         key = GateSwi_enter(TransportVirtio_module->gateSwiHandle);  
         if (obj->isHost)  {
-            VirtQueue_addAvailBuf(obj->vq_slave, rp_msg);
+            VirtQueue_addAvailBuf(obj->vq_slave, rpMsg);
             VirtQueue_kick(obj->vq_slave);
         }
         else {
@@ -490,12 +488,12 @@ Void TransportVirtio_swiFxn(UArg arg0, UArg arg1)
     UInt32            queueId;
     MessageQ_Msg      msg;
     MessageQ_Msg      buf = NULL;
-    RpMsg             rp_msg;
+    Rpmsg_Msg         rpMsg;
     UInt              msgSize;
     TransportVirtio_Object      *obj;
     Bool              buf_avail = FALSE;
-    struct rpmsg_ns_msg * nsMsg; /* Name Service Message */
-    NameServerMsg     * ns_msg;  /* Name Server Message */
+    Rpmsg_NsMsg       * nsMsg; /* Name Service Message */
+    NameServerRemote_Msg * nsrMsg;  /* Name Server Message */
 
     Log_print0(Diags_ENTRY, "--> "FXNN);
 
@@ -503,51 +501,52 @@ Void TransportVirtio_swiFxn(UArg arg0, UArg arg1)
 
     /* Process all available buffers: */
     if (obj->isHost)  {
-        rp_msg = VirtQueue_getUsedBuf(obj->vq_host);
-        buf_avail = (rp_msg != NULL);
+        rpMsg = VirtQueue_getUsedBuf(obj->vq_host);
+        buf_avail = (rpMsg != NULL);
     }
     else {
-        token = VirtQueue_getAvailBuf(obj->vq_slave, (Void **)&rp_msg);
+        token = VirtQueue_getAvailBuf(obj->vq_slave, (Void **)&rpMsg);
         buf_avail = (token >= 0);
     }
 
     while (buf_avail) {
-        Log_print4(Diags_INFO, FXNN": \n\tReceived rp_msg: 0x%x from: %d, "
+        Log_print4(Diags_INFO, FXNN": \n\tReceived rpMsg: 0x%x from: %d, "
                    "to: %d, dataLen: %d",
-                  (IArg)rp_msg, (IArg)rp_msg->srcAddr, (IArg)rp_msg->dstAddr,
-                  (IArg)rp_msg->dataLen);
+                  (IArg)rpMsg, (IArg)rpMsg->srcAddr, (IArg)rpMsg->dstAddr,
+                  (IArg)rpMsg->dataLen);
 
         /* See if this is an rpmsg ns announcment... : */
-        if (rp_msg->dstAddr != RPMSG_MESSAGEQ_PORT) {
-            if (rp_msg->dstAddr == NAMESERVICE_PORT) {
-                nsMsg = (struct rpmsg_ns_msg *)rp_msg->payload;
+        if (rpMsg->dstAddr != RPMSG_MESSAGEQ_PORT) {
+            if (rpMsg->dstAddr == RPMSG_NAMESERVICE_PORT) {
+                nsMsg = (Rpmsg_NsMsg *)rpMsg->payload;
                 Log_print2(Diags_INFO, FXNN": ns announcement "
                         "from %d: %s\n", nsMsg->addr, (IArg)nsMsg->name);
                 /* ... and if it is from our rpmsg-proto socket, save
                  * the rpmsg src address as the NameServer reply address:
                  */
                 if (!strcmp(nsMsg->name, RPMSG_SOCKET_NAME) &&
-                    rp_msg->srcAddr == NAME_SERVER_RPMSG_ADDR) {
-                    NameServerRemote_SetNameServerPort(rp_msg->srcAddr);
-                    obj->name_server_port = rp_msg->srcAddr;
+                    rpMsg->srcAddr == NAME_SERVER_RPMSG_ADDR) {
+                    NameServerRemote_SetNameServerPort(rpMsg->srcAddr);
+                    obj->name_server_port = rpMsg->srcAddr;
                 }
             }
             goto skip;
         }
-        else if (rp_msg->srcAddr >= RPMSG_RESERVED_ADDRESSES) {
-            /* This could either be a NameServer request or a MessageQ.
-             * Check the NameServerMsg reserved field to distinguish.
+        else if (rpMsg->srcAddr >= RPMSG_RESERVED_ADDRESSES) {
+            /*
+             * This could either be a NameServer request or a MessageQ.
+             * Check the NameServerRemote_Msg reserved field to distinguish.
              */
-            ns_msg = (NameServerMsg *)rp_msg->payload;
-            if (ns_msg->reserved == NAMESERVER_MSG_TOKEN) {
+            nsrMsg = (NameServerRemote_Msg *)rpMsg->payload;
+            if (nsrMsg->reserved == NAMESERVER_MSG_TOKEN) {
                 /* Process the NameServer request/reply message: */
-                NameServerRemote_processMessage(ns_msg);
+                NameServerRemote_processMessage(nsrMsg);
                 goto skip;
             }
         }
 
-        /* Convert RpMsg payload into a MessageQ_Msg: */
-        msg = (MessageQ_Msg)rp_msg->payload;
+        /* Convert Rpmsg payload into a MessageQ_Msg: */
+        msg = (MessageQ_Msg)rpMsg->payload;
 
         Log_print4(Diags_INFO, FXNN": \n\tmsg->heapId: %d, "
                    "msg->msgSize: %d, msg->dstId: %d, msg->msgId: %d\n",
@@ -571,7 +570,7 @@ Void TransportVirtio_swiFxn(UArg arg0, UArg arg1)
 
 skip:
         if (obj->isHost)  {
-            VirtQueue_addAvailBuf(obj->vq_host, rp_msg);
+            VirtQueue_addAvailBuf(obj->vq_host, rpMsg);
         }
         else {
             VirtQueue_addUsedBuf(obj->vq_slave, token);
@@ -580,11 +579,11 @@ skip:
 
         /* See if there is another one: */
         if (obj->isHost)  {
-            rp_msg = VirtQueue_getUsedBuf(obj->vq_host);
-            buf_avail = (rp_msg != NULL);
+            rpMsg = VirtQueue_getUsedBuf(obj->vq_host);
+            buf_avail = (rpMsg != NULL);
         }
         else {
-            token = VirtQueue_getAvailBuf(obj->vq_slave, (Void **)&rp_msg);
+            token = VirtQueue_getAvailBuf(obj->vq_slave, (Void **)&rpMsg);
             buf_avail = (token >= 0);
         }
     }
@@ -603,4 +602,3 @@ Void TransportVirtio_setErrFxn(TransportVirtio_ErrFxn errFxn)
 {
     /* Ignore the errFxn */
 }
-

@@ -52,7 +52,7 @@
 #include <ti/ipc/MessageQ.h>
 #include <ti/ipc/MultiProc.h>
 #include <ti/ipc/transports/TransportVirtioSetup.h>
-#include <ti/ipc/rpmsg/rpmsg.h>
+#include <ti/ipc/rpmsg/Rpmsg.h>
 #include <ti/ipc/transports/_TransportVirtio.h>
 
 /*  ----------------------------------- BIOS6 module Headers         */
@@ -84,7 +84,7 @@ void myNameMap_unregister(Char * name, UInt32 port)
  * This to get TransportVirtio_attach() and NameServerRemoteRpmsg_attach()
  * called in lieu of using Ipc_start().
  * Must be done after BIOS_start(), as TransportVirtio startup relies on
- * passing an interrupt handshake.
+ * passing an interrupt handshake when this core is acting as host.
  */
 void myIpcAttach(UInt procId)
 {
@@ -136,14 +136,14 @@ void myIpcDetach(UInt procId)
 }
 
 /*
- *  ======== tsk1_func ========
+ *  ======== tsk1Fxn ========
  *  Do the IpcAttach/IpcDetach once at end of test 
  */
-Void tsk1_func(UArg arg0, UArg arg1)
+Void tsk1Fxn(UArg arg0, UArg arg1)
 {
     UInt             procId = MultiProc_getId("HOST");
 
-    System_printf("tsk1_func: In tsk1_func.\n");
+    System_printf("tsk1Fxn: In tsk1Fxn.\n");
 
     /* Get our Transport loaded in absence of Ipc module: */
     myIpcAttach(procId);
@@ -160,13 +160,13 @@ Void tsk1_func(UArg arg0, UArg arg1)
 }
 
 /*
- *  ======== loopback_fxn========
+ *  ======== loopbackFxn========
  *  Receive and return messages.
- *  Run at priority lower than tsk1_func above.
+ *  Run at priority lower than tsk1Fxn above.
  *  Inputs:
  *     - arg0: number of the thread, appended to MessageQ host and slave names.
  */
-Void loopback_fxn (UArg arg0, UArg arg1)
+Void loopbackFxn (UArg arg0, UArg arg1)
 {
     MessageQ_Msg     getMsg;
     MessageQ_Handle  messageQ;
@@ -177,7 +177,7 @@ Void loopback_fxn (UArg arg0, UArg arg1)
     Char             localQueueName[64];
     Char             hostQueueName[64];
 
-    System_printf("Thread loopback_fxn: %d\n", arg0);
+    System_printf("Thread loopbackFxn: %d\n", arg0);
 
     System_sprintf(localQueueName, "%s_%d", SLAVE_MESSAGEQNAME, arg0);
     System_sprintf(hostQueueName,  "%s_%d", HOST_MESSAGEQNAME,  arg0);
@@ -189,11 +189,11 @@ Void loopback_fxn (UArg arg0, UArg arg1)
     }
 
     remoteQueueId = MessageQ_getQueueId(messageQ);
-    System_printf("loopback_fxn: created MessageQ: %s; QueueID: 0x%x\n",
+    System_printf("loopbackFxn: created MessageQ: %s; QueueID: 0x%x\n",
 	localQueueName, MessageQ_getQueueId(messageQ));
 
     /* Open the remote message queue. Spin until it is ready. */
-    System_printf("loopback_fxn: Calling MessageQ_open...\n");
+    System_printf("loopbackFxn: Calling MessageQ_open...\n");
     do {
         status = MessageQ_open(hostQueueName, &remoteQueueId);
         /* 1 second sleep: */
@@ -201,7 +201,7 @@ Void loopback_fxn (UArg arg0, UArg arg1)
     }
     while (status != MessageQ_S_SUCCESS);
 
-    System_printf("loopback_fxn: Remote MessageQ %s; QueueID: 0x%x\n",
+    System_printf("loopbackFxn: Remote MessageQ %s; QueueID: 0x%x\n",
 	hostQueueName, remoteQueueId);
 
     System_printf("Start the main loop: %d\n", arg0);
@@ -258,6 +258,9 @@ Int main(Int argc, Char* argv[])
     System_printf("main: MultiProc id = %d\n", MultiProc_self());
 
     buf = Memory_alloc(0, (HEAP_NUMMSGS * HEAP_MSGSIZE) + HEAP_ALIGN, 8, &eb);
+    if (buf == NULL) {
+        System_abort("Memory_alloc failed\n" );
+    }
 
     /*
      *  Create the heap that will be used to allocate messages.
@@ -281,7 +284,7 @@ Int main(Int argc, Char* argv[])
     params.priority = 3;
     for (i = 0; i < NUMTHREADS; i++) {
         params.arg0 = i;
-        Task_create(loopback_fxn, &params, NULL);
+        Task_create(loopbackFxn, &params, NULL);
     }
 
     BIOS_start();

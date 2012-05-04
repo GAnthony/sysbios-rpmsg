@@ -61,5 +61,3 @@ function module$static$init(mod, params)
   /* Init Virtio Transport params */
   mod.gateSwiHandle = null;
 }
-
-

@@ -102,6 +102,6 @@ internal:
         Semaphore.Handle    semRemoteWait;  /* sem to wait on remote proc    */
         GateMutex.Handle    gateMutex;      /* gate to protect critical code */
         Ptr                 nsMsg;          /* pointer to NameServer msg     */
-        Int                 ns_port;        /* Name Server port rpmsg addr   */
+        Int                 nsPort;         /* Name Server port rpmsg addr   */
     };
 }

@@ -30,10 +30,23 @@
  * EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
+#ifndef _TransportVirtio__include
+#define _TransportVitio__include
+
+#if defined (__cplusplus)
+extern "C" {
+#endif
+
+/* That special per processor RPMSG channel reserved to multiplex MessageQ */
 #define RPMSG_MESSAGEQ_PORT         61
 #define NAME_SERVER_RPMSG_ADDR      0
 
-extern void nameService_register(char * name, UInt32 port, enum rpmsg_ns_flags);
+extern void nameService_register(char * name, UInt32 port,
+                                 enum Rpmsg_nsFlags flags);
 extern void sendRpmsg(UInt16 dstProc, UInt32 dstEndpt, UInt32 srcEndpt,
               Ptr data, UInt16 len);
 
+#if defined (__cplusplus)
+}
+#endif /* defined (__cplusplus) */
+#endif /* _TransportVitio__include */

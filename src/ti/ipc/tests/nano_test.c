@@ -52,7 +52,7 @@
 #include <ti/ipc/MessageQ.h>
 #include <ti/ipc/MultiProc.h>
 #include <ti/ipc/transports/TransportVirtioSetup.h>
-#include <ti/ipc/rpmsg/rpmsg.h>
+#include <ti/ipc/rpmsg/Rpmsg.h>
 #include <ti/ipc/transports/_TransportVirtio.h>
 #include <ti/ipc/family/omap4430/VirtQueue.h>
 
@@ -162,10 +162,10 @@ void myIpcDetach(UInt procId)
 }
 
 /*
- *  ======== tsk1_func ========
+ *  ======== tsk1Fxn ========
  *  Receive and return messages
  */
-Void tsk1_func(UArg arg0, UArg arg1)
+Void tsk1Fxn(UArg arg0, UArg arg1)
 {
     InputMsg         *inMsg;
     MessageQ_Handle  messageQ;
@@ -175,7 +175,7 @@ Void tsk1_func(UArg arg0, UArg arg1)
     UInt             procId = MultiProc_getId("HOST");
     int              i;
 
-    System_printf("tsk1_func: In tsk1_func.\n");
+    System_printf("tsk1Fxn: Entered\n");
 
     /* Get our Transport loaded in absence of Ipc module: */
     myIpcAttach(procId);
@@ -187,11 +187,11 @@ Void tsk1_func(UArg arg0, UArg arg1)
     }
 
     remoteQueueId = MessageQ_getQueueId(messageQ);
-    System_printf("tsk1_func: created MessageQ: %s; QueueID: 0x%x\n",
+    System_printf("tsk1Fxn: created MessageQ: %s; QueueID: 0x%x\n",
 	SLAVE_MESSAGEQNAME, MessageQ_getQueueId(messageQ));
 
     /* Open the remote message queue. Spin until it is ready. */
-    System_printf("tsk1_func: Calling MessageQ_open...\n");
+    System_printf("tsk1Fxn: Calling MessageQ_open...\n");
     do {
         status = MessageQ_open(HOST_MESSAGEQNAME, &remoteQueueId);
         /* 1 second sleep: */
@@ -199,7 +199,7 @@ Void tsk1_func(UArg arg0, UArg arg1)
     }
     while (status != MessageQ_S_SUCCESS);
 
-    System_printf("tsk1_func: Remote MessageQ %s; QueueID: 0x%x\n",
+    System_printf("tsk1Fxn: Remote MessageQ %s; QueueID: 0x%x\n",
 	HOST_MESSAGEQNAME, remoteQueueId);
 
     /* Use a static message for outMsg: no need to call MessageQ_alloc(): */
