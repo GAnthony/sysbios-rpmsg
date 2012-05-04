@@ -37,11 +37,11 @@
 
 #include <ti/ipc/MultiProc.h>
 #include <ti/ipc/rpmsg/MessageQCopy.h>
-#include <ti/ipc/rpmsg/rpmsg.h>
+#include <ti/ipc/rpmsg/Rpmsg.h>
 
-static void sendMessage(Char * name, UInt32 port, enum rpmsg_ns_flags flags)
+static void sendMessage(Char * name, UInt32 port, enum Rpmsg_nsFlags flags)
 {
-    struct rpmsg_ns_msg nsMsg;
+    struct Rpmsg_NsMsg nsMsg;
 
     strncpy(nsMsg.name, name, RPMSG_NAME_SIZE);
     nsMsg.addr = port;
