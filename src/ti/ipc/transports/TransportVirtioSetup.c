@@ -110,5 +110,3 @@ Bool TransportVirtioSetup_isRegistered(UInt16 remoteProcId)
 
     return (registered);
 }
-
-

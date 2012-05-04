@@ -30,5 +30,17 @@
  * EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
+#ifndef _TransportVirtio__include
+#define _TransportVitio__include
+
+#if defined (__cplusplus)
+extern "C" {
+#endif
+
+/* That special per processor RPMSG channel reserved to multiplex MessageQ */
 #define RPMSG_MESSAGEQ_PORT         61
 
+#if defined (__cplusplus)
+}
+#endif /* defined (__cplusplus) */
+#endif /* _TransportVitio__include */

@@ -52,7 +52,7 @@
 #include <ti/sdo/ipc/_MessageQ.h>
 
 #include <ti/ipc/rpmsg/virtio_ring.h>
-#include <ti/ipc/rpmsg/rpmsg.h>
+#include <ti/ipc/rpmsg/Rpmsg.h>
 #include <ti/ipc/rpmsg/MessageQCopy.h>
 #include <ti/ipc/rpmsg/VirtQueue.h>
 #include <ti/ipc/rpmsg/_VirtQueue.h>
@@ -63,10 +63,7 @@
 #include "package/internal/TransportVirtio.xdc.h"
 
 /* Maximum RPMSG payload: */
-#define MAX_PAYLOAD (RP_MSG_BUF_SIZE - sizeof(RpMsg_Header))
-
-/* That special per processor RPMSG channel reserved to multiplex MessageQ */
-#define RPMSG_MESSAGEQ_PORT         61
+#define MAX_PAYLOAD (RP_MSG_BUF_SIZE - sizeof(Rpmsg_Header))
 
 /* Addresses below this are assumed to be bound to MessageQ objects: */
 #define RPMSG_RESERVED_ADDRESSES     (1024)
@@ -78,12 +75,11 @@ static Void transportCallbackFxn(MessageQCopy_Handle msgq, UArg arg, Ptr data,
                                       UInt16 dataLen, UInt32 srcAddr);
 
 /*  --------------  TEMP NameService over rpmsg ----------------------- */
-
-static void nameService_register(UInt16 dstProc, char * name, UInt32 port, enum rpmsg_ns_flags flags)
+static void nameService_register(UInt16 dstProc, char * name, UInt32 port, enum Rpmsg_nsFlags flags)
 {
-    struct rpmsg_ns_msg nsMsg;
+    struct Rpmsg_NsMsg nsMsg;
     UInt16 len      = sizeof(nsMsg);
-    UInt32 dstEndpt = NAMESERVICE_PORT;
+    UInt32 dstEndpt = RPMSG_NAMESERVICE_PORT;
     UInt32 srcEndpt = port;
     Ptr    data     = &nsMsg;
 
@@ -130,11 +126,11 @@ Int TransportVirtio_Instance_init(TransportVirtio_Object *obj,
                                           (UArg)obj,
                                           &myEndpoint);
 
-    /* TBD: The following should be done later via a ns_announcement from
-     * Linux side to set this.
+    /*
+     * TBD: The following should be set via a ns_announcement from Linux side.
      * Setting this now will cause NameServer requests from BIOS side to
      * timeout (benignly), as the app calls MessageQ_open() in a loop.
-     * The NameMap module needs to register for ns_announcements.
+     * Ideally, a NameMap module needs to allow registration for announcements.
      */
     NameServerRemote_SetNameServerPort(NAME_SERVER_RPMSG_ADDR);
 
@@ -164,12 +160,10 @@ Void TransportVirtio_Instance_finalize(TransportVirtio_Object *obj, Int status)
     nameService_register(obj->remoteProcId, RPMSG_SOCKET_NAME,
                          RPMSG_MESSAGEQ_PORT, RPMSG_NS_DESTROY);
 
-
     switch(status) {
         case 0: /* MessageQ_registerTransport succeeded */
             ti_sdo_ipc_MessageQ_unregisterTransport(obj->remoteProcId,
                 obj->priority);
-
             /* fall thru OK */
         case 1: /* NOT USED: Notify_registerEventSingle failed */
         case 2: /* MessageQ_registerTransport failed */
@@ -251,7 +245,7 @@ static Void transportCallbackFxn(MessageQCopy_Handle msgq, UArg arg, Ptr data,
     MessageQ_Msg      msg;
     MessageQ_Msg      buf = NULL;
     UInt              msgSize;
-    NameServerMsg     * ns_msg;  /* Name Server Message */
+    NameServerRemote_Msg     * ns_msg;  /* Name Server Message */
 
     Log_print0(Diags_ENTRY, "--> "FXNN);
 
@@ -259,10 +253,11 @@ static Void transportCallbackFxn(MessageQCopy_Handle msgq, UArg arg, Ptr data,
                   (IArg)data, (IArg)srcAddr, (IArg)dataLen);
 
     if(srcAddr >= RPMSG_RESERVED_ADDRESSES) {
-        /* This could either be a NameServer request or a MessageQ.
-         * Check the NameServerMsg reserved field to distinguish.
+        /*
+         * This could either be a NameServer request or a MessageQ.
+         * Check the NameServerRemote_Msg reserved field to distinguish.
          */
-        ns_msg = (NameServerMsg *)data;
+        ns_msg = (NameServerRemote_Msg *)data;
         if (ns_msg->reserved == NAMESERVER_MSG_TOKEN) {
             /* Process the NameServer request/reply message: */
             NameServerRemote_processMessage(ns_msg);
@@ -270,7 +265,7 @@ static Void transportCallbackFxn(MessageQCopy_Handle msgq, UArg arg, Ptr data,
         }
     }
 
-    /* Convert RpMsg payload into a MessageQ_Msg: */
+    /* Convert Rpmsg payload into a MessageQ_Msg: */
     msg = (MessageQ_Msg)data;
 
     Log_print4(Diags_INFO, FXNN": \n\tmsg->heapId: %d, "
@@ -304,4 +299,3 @@ Void TransportVirtio_setErrFxn(TransportVirtio_ErrFxn errFxn)
 {
     /* Ignore the errFxn */
 }
-

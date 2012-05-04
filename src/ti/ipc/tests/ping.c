@@ -32,7 +32,8 @@
 /*
  *  ======== ping.c ========
  *
- *  Works with the rpmsg_proto_bench Linux sample over rpmsg-proto socket.
+ *  Works with the rpmsg_proto* Linux samples over the rpmsg-proto socket.
+ *  rpmsg_proto* samples are in the host/ directory of this tree.
  */
 
 #include <xdc/std.h>
@@ -51,6 +52,8 @@
 #include <ti/srvmgr/NameMap.h>
 #include <ti/ipc/rpmsg/MessageQCopy.h>
 
+typedef UInt32 u32;
+#include <ti/resources/rsc_table.h>
 
 static UInt16 dstProc;
 static MessageQCopy_Handle handle = NULL;
@@ -61,7 +64,7 @@ static UInt32 counter = 0;
 static Void pingCallbackFxn(MessageQCopy_Handle h, UArg arg, Ptr data,
 	UInt16 len, UInt32 src)
 {
-    Char                   buffer[128];
+    Char  buffer[128];
 
     memcpy(buffer, data, len);
     buffer[len] = '\0';
@@ -84,11 +87,8 @@ Void pingTaskFxn(UArg arg0, UArg arg1)
     /* Announce we are here: */
     NameMap_register("rpmsg-proto", arg0);
 
-    /* Note: we never teardown with MessageQCopy_destroy() */
+    /* Note: we don't get a chance to teardown with MessageQCopy_destroy() */
 }
-
-typedef UInt32 u32;
-#include <ti/resources/rsc_table.h>
 
 Int main(Int argc, char* argv[])
 {

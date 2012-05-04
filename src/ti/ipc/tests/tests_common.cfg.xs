@@ -148,5 +148,5 @@ Program.global.NUMLOOPS = 100;  // was 100
 var params = new Task.Params;
 params.instance.name = "tsk0";
 params.priority = 5;
-Program.global.tsk1 = Task.create('&tsk1_func', params);
+Program.global.tsk1 = Task.create('&tsk1Fxn', params);
 
