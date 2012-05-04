@@ -30,21 +30,21 @@
  * EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 /** ============================================================================
- *  @file       rpmsg.h
+ *  @file       Rpmsg.h
  *
- *  @brief      rpmsg and related structures.
+ *  @brief      Rpmsg and related structures.
  *
  */
 
 
-#ifndef ti_ipc_rpmsg__include
-#define ti_ipc_rpmsg__include
+#ifndef ti_ipc_Rpmsg__include
+#define ti_ipc_Rpmsg__include
 
 #if defined (__cplusplus)
 extern "C" {
 #endif
 
-enum rpmsg_ns_flags {
+enum Rpmsg_nsFlags {
     RPMSG_NS_CREATE = 0,
     RPMSG_NS_DESTROY = 1
 };
@@ -52,29 +52,29 @@ enum rpmsg_ns_flags {
 #define RPMSG_NAME_SIZE 32
 
 
-typedef struct rpmsg_ns_msg {
+typedef struct Rpmsg_NsMsg {
     char name[RPMSG_NAME_SIZE]; /* name of service including 0 */
     UInt32 addr;                /* address of the service */
     UInt32 flags;               /* see below */
-} rpmsg_ns_msg;
+} Rpmsg_NsMsg;
 
 
-#define NAMESERVICE_PORT   53
+#define RPMSG_NAMESERVICE_PORT   53
 
 /* Message Header: Must match rp_msg_hdr in virtio_rp_msg.h on Linux side. */
-typedef struct RpMsg_Header {
+typedef struct Rpmsg_Header {
     Bits32 srcAddr;                 /* source endpoint addr               */
     Bits32 dstAddr;                 /* destination endpoint addr          */
     Bits32 reserved;                /* reserved                           */
     Bits16 dataLen;                 /* data length                        */
     Bits16 flags;                   /* bitmask of different flags         */
     UInt8  payload[];               /* Data payload                       */
-} RpMsg_Header;
+} Rpmsg_Header;
 
-typedef RpMsg_Header *RpMsg;
+typedef Rpmsg_Header *Rpmsg_Msg;
 
 
 #if defined (__cplusplus)
 }
 #endif /* defined (__cplusplus) */
-#endif /* ti_ipc_rpmsg__include */
+#endif /* ti_ipc_Rpmsg__include */
