@@ -59,8 +59,6 @@ var testArray = [
     {name: 'messageq_multi', copts: "-D BENCHMARK", buildPlatforms: ["ti.platform.omap4430.core0"]},
     {name: 'messageq_socket', buildPlatforms: ["ti.platform.omap4430.core0"]},
     {name: 'messageq_bench', sources: ["messageq_socket.c"], copts: "-D BENCHMARK", buildPlatforms: ["ti.platform.omap4430.core0"]},
-//    {name: 'message_noipc_core0', copts: "-D APPM3_IS_HOST", buildPlatforms: ["ti.platform.omap4430.core0"]},
-//    {name: 'message_noipc_core1', buildPlatforms: ["ti.platform.omap4430.core1"]},
 ];
 
 arguments = ["profile=debug platform=all"];
