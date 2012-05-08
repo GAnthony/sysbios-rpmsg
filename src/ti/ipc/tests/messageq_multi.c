@@ -250,8 +250,7 @@ Int main(Int argc, Char* argv[])
     Int                    i;
     Task_Params            params;
 
-    System_printf("%d resources at 0x%x\n",
-                  sizeof(resources) / sizeof(struct resource), resources);
+    System_printf("%d resources at 0x%x\n", resources.num, resources);
 
     /* Initialize the Error_Block. This is required before using it */
     Error_init(&eb);

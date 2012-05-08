@@ -220,8 +220,7 @@ Int main(Int argc, Char* argv[])
     HeapBuf_Handle         heapHandle;
     HeapBuf_Params         heapBufParams;
 
-    System_printf("%d resources at 0x%x\n",
-                  sizeof(resources) / sizeof(struct resource), resources);
+    System_printf("%d resources at 0x%x\n", resources.num, resources);
 
     /* Initialize the Error_Block. This is required before using it */
     Error_init(&eb);
