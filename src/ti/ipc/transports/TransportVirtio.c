@@ -290,11 +290,6 @@ Int TransportVirtio_Instance_init(TransportVirtio_Object *obj,
     TransportVirtio_module->gateSwiHandle = GateSwi_create(&gatePrms, NULL);
 
     /*
-     * Plug Vring Interrupts...
-     */
-    VirtQueue_startup(obj->remoteProcId, obj->isHost);
-
-    /*
      * Create a pair VirtQueues (one for sending, one for receiving).
      * Note: First one gets an even, second gets odd vq ID.
      */
@@ -328,6 +323,11 @@ Int TransportVirtio_Instance_init(TransportVirtio_Object *obj,
        }
        VirtQueue_kick(obj->vq_host);
     }
+
+    /*
+     * Plug Vring Interrupts...
+     */
+    VirtQueue_startup(obj->remoteProcId, obj->isHost);
 
     if (flag == FALSE) {
         return (2);
