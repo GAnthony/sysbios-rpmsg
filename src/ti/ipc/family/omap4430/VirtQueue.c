@@ -139,7 +139,7 @@ enum {
     RP_MSG_HIBERNATION     = (Int)0xFFFFFF07
 };
 
-static VirtQueue_Object *queueRegistry[NUM_QUEUES];
+static VirtQueue_Object *queueRegistry[NUM_QUEUES] = {NULL};
 
 static inline Void * mapPAtoVA(UInt pa)
 {
@@ -564,6 +564,9 @@ Void VirtQueue_slaveIsr(UArg msg)
         vq = queueRegistry[msg];
         if (vq) {
             vq->callback(vq);
+        }
+        else {
+            Log_print0(Diags_USER1, "msg recvd before callback registered!\n");
         }
     }
 }
