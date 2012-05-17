@@ -47,7 +47,7 @@ Pkg.attrs.exportSrc = false;
 Pkg.attrs.exportCfg = true;
 Pkg.otherFiles = [
     "IpcMemory.h",
-    "rsc_table.h"
+    "rsc_types.h"
 ];
 
 /* list of libraries to build */
