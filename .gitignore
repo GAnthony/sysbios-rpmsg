@@ -25,4 +25,6 @@ src/ti/ipc/transports/TransportVirtio.h
 src/ti/ipc/transports/TransportVirtioSetup.h
 src/ti/ipc/family/omap4430/InterruptM3.h
 src/ti/ipc/family/omap4430/VirtQueue.h
+src/ti/ipc/family/omapl138/InterruptDsp.h
+src/ti/ipc/family/omapl138/VirtQueue.h
 src/ti/ipc/namesrv/NameServerRemoteRpmsg.h
