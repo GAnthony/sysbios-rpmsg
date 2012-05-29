@@ -46,10 +46,22 @@ var trgFilter_m3 = {
         list: [ "v7M" ]
 };
 
+var objList_674 = [
+      "TransportVirtioSetup",
+      "TransportVirtio",
+];
+
+var trgFilter_674 = {
+        field: "isa",
+        list: [ "674" ]
+};
+
 /* generate makefiles */
 arguments = ["profile=debug platform=all"];
 commonBld.buildLibs(objList_m3, undefined, trgFilter_m3, arguments);
+commonBld.buildLibs(objList_674, undefined, trgFilter_674, arguments);
 
 arguments = ["profile=release platform=all"];
 commonBld.buildLibs(objList_m3, undefined, trgFilter_m3, arguments);
+commonBld.buildLibs(objList_674, undefined, trgFilter_674, arguments);
 

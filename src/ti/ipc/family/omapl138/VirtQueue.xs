@@ -30,40 +30,35 @@
  * EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 /*
- *  ======== TransportVirtio.xs ================
+ *  ======== VirtQueue.xs ================
  */
 
-var TransportVirtio  = null;
-var MessageQ         = null;
-var MultiProc        = null;
-var Swi              = null;
-var TransportVirtioSetup   = null;
+var MultiProc = null;
+var VirtQueue = null;
 
-/*
+ /*
  *  ======== module$use ========
  */
 function module$use()
 {
-    TransportVirtio = this;
-    MultiProc       = xdc.useModule("ti.sdo.utils.MultiProc");
-    MessageQ        = xdc.useModule("ti.sdo.ipc.MessageQ");
-    Swi             = xdc.useModule("ti.sysbios.knl.Swi");
-    TransportVirtioSetup = xdc.useModule("ti.ipc.transports.TransportVirtioSetup");
-    xdc.loadPackage("ti.ipc.namesrv");
-    if (Program.platformName.match(/OMAPL138/)) {
-        VirtQueue       = xdc.useModule("ti.ipc.family.omapl138.VirtQueue");
-        xdc.loadPackage("ti.ipc.family.omapl138");
-    }
-    else {
-        VirtQueue       = xdc.useModule("ti.ipc.family.omap4430.VirtQueue");
-        xdc.loadPackage("ti.ipc.family.omap4430");
-    }
+
+    MultiProc   = xdc.useModule("ti.sdo.utils.MultiProc");
+
+    Swi = xdc.useModule("ti.sysbios.knl.Swi");
+    Interrupt = xdc.useModule("ti.ipc.family.omapl138.InterruptDsp");
+
+    this.hostProcId      = MultiProc.getIdMeta("HOST");
+    this.dspProcId       = MultiProc.getIdMeta("DSP");
 }
+
 /*
  *  ======== module$static$init ========
  */
 function module$static$init(mod, params)
 {
-  /* Init Virtio Transport params */
-  mod.gateSwiHandle = null;
+  /* Init VirtQueue params */
+  mod.numQueues = 0;
+  mod.hostSlaveSynced = 0;
+  mod.virtQueueInitialized = 0;
+  mod.queueRegistry = null;
 }

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2012, Texas Instruments Incorporated
+ * Copyright (c) 2011, Texas Instruments Incorporated
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -28,42 +28,44 @@
  * WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR
  * OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE,
  * EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+ *
  */
 /*
- *  ======== TransportVirtio.xs ================
+ *  ======== InterruptDsp.xs ========
  */
 
-var TransportVirtio  = null;
-var MessageQ         = null;
-var MultiProc        = null;
-var Swi              = null;
-var TransportVirtioSetup   = null;
+var Hwi         = null;
+var InterruptDsp = null;
+var MultiProc   = null;
 
 /*
  *  ======== module$use ========
  */
 function module$use()
 {
-    TransportVirtio = this;
-    MultiProc       = xdc.useModule("ti.sdo.utils.MultiProc");
-    MessageQ        = xdc.useModule("ti.sdo.ipc.MessageQ");
-    Swi             = xdc.useModule("ti.sysbios.knl.Swi");
-    TransportVirtioSetup = xdc.useModule("ti.ipc.transports.TransportVirtioSetup");
-    xdc.loadPackage("ti.ipc.namesrv");
-    if (Program.platformName.match(/OMAPL138/)) {
-        VirtQueue       = xdc.useModule("ti.ipc.family.omapl138.VirtQueue");
-        xdc.loadPackage("ti.ipc.family.omapl138");
-    }
-    else {
-        VirtQueue       = xdc.useModule("ti.ipc.family.omap4430.VirtQueue");
-        xdc.loadPackage("ti.ipc.family.omap4430");
-    }
+    InterruptDsp     = this;
+
+    Hwi         = xdc.useModule("ti.sysbios.family.c64p.Hwi");
+    MultiProc   = xdc.useModule("ti.sdo.utils.MultiProc");
+
+    this.hostProcId   = MultiProc.getIdMeta("HOST");
+    this.dspProcId    = MultiProc.getIdMeta("DSP");
 }
+
 /*
  *  ======== module$static$init ========
  */
 function module$static$init(mod, params)
 {
-  /* Init Virtio Transport params */
-  mod.gateSwiHandle = null;
+    var fxnTable = InterruptDsp.$object.fxnTable;
+    var MultiProc = xdc.module('ti.sdo.utils.MultiProc');
+
+    /* The function table length should be the number of processors */
+    fxnTable.length = MultiProc.numProcessors;
+    for (var i = 0; i < fxnTable.length; i++) {
+        fxnTable[i].func = null;
+        fxnTable[i].arg = 0;
+    }
+
+    mod.numPlugged = 0;
 }

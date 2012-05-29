@@ -36,5 +36,6 @@
 
 /* add custom files to all releases */
 Pkg.otherFiles = [
-    "rsc_table.h"
+    "rsc_table.h",
+    "rsc_table_omapl138.h"
 ];

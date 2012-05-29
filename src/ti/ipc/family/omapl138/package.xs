@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2012, Texas Instruments Incorporated
+ * Copyright (c) 2011, Texas Instruments Incorporated
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -28,42 +28,50 @@
  * WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR
  * OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE,
  * EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
- */
+ * */
 /*
- *  ======== TransportVirtio.xs ================
+ *  ======== package.xs ========
+ *
  */
 
-var TransportVirtio  = null;
-var MessageQ         = null;
-var MultiProc        = null;
-var Swi              = null;
-var TransportVirtioSetup   = null;
 
 /*
- *  ======== module$use ========
+ *  ======== close ========
  */
-function module$use()
+function close()
 {
-    TransportVirtio = this;
-    MultiProc       = xdc.useModule("ti.sdo.utils.MultiProc");
-    MessageQ        = xdc.useModule("ti.sdo.ipc.MessageQ");
-    Swi             = xdc.useModule("ti.sysbios.knl.Swi");
-    TransportVirtioSetup = xdc.useModule("ti.ipc.transports.TransportVirtioSetup");
-    xdc.loadPackage("ti.ipc.namesrv");
-    if (Program.platformName.match(/OMAPL138/)) {
-        VirtQueue       = xdc.useModule("ti.ipc.family.omapl138.VirtQueue");
-        xdc.loadPackage("ti.ipc.family.omapl138");
-    }
-    else {
-        VirtQueue       = xdc.useModule("ti.ipc.family.omap4430.VirtQueue");
-        xdc.loadPackage("ti.ipc.family.omap4430");
-    }
+    Program.exportModule('ti.sysbios.hal.Cache');
+    Program.exportModule('ti.sysbios.knl.Idle');
 }
+
+
 /*
- *  ======== module$static$init ========
+ *  ======== getLibs ========
  */
-function module$static$init(mod, params)
+function getLibs(prog)
 {
-  /* Init Virtio Transport params */
-  mod.gateSwiHandle = null;
+    var suffix = prog.build.target.findSuffix(this);
+
+    var ompProfile = "debug";
+
+    if (suffix == null) {
+        /* no matching lib found in this package, return "" */
+        $trace("Unable to locate a compatible library, returning none.",
+                1, ['getLibs']);
+        return ("");
+    }
+
+    /* the location of the libraries are in lib/<profile>/* */
+    var lib = "lib/" + ompProfile + "/ti.ipc.family.omapl138.a" + suffix;
+
+
+    /*
+     * If the requested profile doesn't exist, we return the 'release' library.
+     */
+    if (!java.io.File(this.packageBase + lib).exists()) {
+        print("cant find " + this.packageBase + lib);
+        $trace("Unable to locate lib for requested '" + this.profile);
+    }
+
+    return (lib);
 }

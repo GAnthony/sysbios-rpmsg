@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2012, Texas Instruments Incorporated
+ * Copyright (c) 2011, Texas Instruments Incorporated
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -30,40 +30,14 @@
  * EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 /*
- *  ======== TransportVirtio.xs ================
+ *  ======== package.xdc ========
+ *
  */
 
-var TransportVirtio  = null;
-var MessageQ         = null;
-var MultiProc        = null;
-var Swi              = null;
-var TransportVirtioSetup   = null;
-
-/*
- *  ======== module$use ========
+/*!
+ *  ======== ti.ipc.family.omapl138 ========
  */
-function module$use()
-{
-    TransportVirtio = this;
-    MultiProc       = xdc.useModule("ti.sdo.utils.MultiProc");
-    MessageQ        = xdc.useModule("ti.sdo.ipc.MessageQ");
-    Swi             = xdc.useModule("ti.sysbios.knl.Swi");
-    TransportVirtioSetup = xdc.useModule("ti.ipc.transports.TransportVirtioSetup");
-    xdc.loadPackage("ti.ipc.namesrv");
-    if (Program.platformName.match(/OMAPL138/)) {
-        VirtQueue       = xdc.useModule("ti.ipc.family.omapl138.VirtQueue");
-        xdc.loadPackage("ti.ipc.family.omapl138");
-    }
-    else {
-        VirtQueue       = xdc.useModule("ti.ipc.family.omap4430.VirtQueue");
-        xdc.loadPackage("ti.ipc.family.omap4430");
-    }
-}
-/*
- *  ======== module$static$init ========
- */
-function module$static$init(mod, params)
-{
-  /* Init Virtio Transport params */
-  mod.gateSwiHandle = null;
+package ti.ipc.family.omapl138 [1,0,0,0] {
+    module    InterruptDsp;
+    module    VirtQueue;
 }

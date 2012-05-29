@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2012, Texas Instruments Incorporated
+ * Copyright (c) 2011, Texas Instruments Incorporated
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -28,42 +28,44 @@
  * WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR
  * OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE,
  * EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+ *
  */
 /*
- *  ======== TransportVirtio.xs ================
+ *  ======== InterruptDsp.xdc ========
  */
 
-var TransportVirtio  = null;
-var MessageQ         = null;
-var MultiProc        = null;
-var Swi              = null;
-var TransportVirtioSetup   = null;
+import ti.sdo.utils.MultiProc;
 
-/*
- *  ======== module$use ========
+/*!
+ *  ======== InterruptDsp ========
+ *  OMAPL138/DSP IPC interrupt manager
  */
-function module$use()
+
+module InterruptDsp inherits ti.sdo.ipc.notifyDrivers.IInterrupt
 {
-    TransportVirtio = this;
-    MultiProc       = xdc.useModule("ti.sdo.utils.MultiProc");
-    MessageQ        = xdc.useModule("ti.sdo.ipc.MessageQ");
-    Swi             = xdc.useModule("ti.sysbios.knl.Swi");
-    TransportVirtioSetup = xdc.useModule("ti.ipc.transports.TransportVirtioSetup");
-    xdc.loadPackage("ti.ipc.namesrv");
-    if (Program.platformName.match(/OMAPL138/)) {
-        VirtQueue       = xdc.useModule("ti.ipc.family.omapl138.VirtQueue");
-        xdc.loadPackage("ti.ipc.family.omapl138");
+
+    const UInt INVALIDPAYLOAD = 0xFFFFFFFF;
+
+internal:
+
+    /*! Function table */
+    struct FxnTable {
+        Fxn    func;
+        UArg   arg;
     }
-    else {
-        VirtQueue       = xdc.useModule("ti.ipc.family.omap4430.VirtQueue");
-        xdc.loadPackage("ti.ipc.family.omap4430");
-    }
-}
-/*
- *  ======== module$static$init ========
- */
-function module$static$init(mod, params)
-{
-  /* Init Virtio Transport params */
-  mod.gateSwiHandle = null;
+
+    /*!
+     *  ======== intShmStub ========
+     *  Stub function plugged as interrupt handler
+     */
+    Void isr(UArg arg);
+
+    struct Module_State {
+        FxnTable   fxnTable[];  /* One entry for each core */
+        UInt       numPlugged;  /* # of times the interrupt was registered */
+    };
+
+    /*! Statically retrieve procIds to avoid doing this at runtime */
+    config UInt hostProcId  = MultiProc.INVALIDID;
+    config UInt dspProcId   = MultiProc.INVALIDID;
 }
