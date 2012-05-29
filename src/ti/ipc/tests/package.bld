@@ -57,6 +57,7 @@ Pkg.attrs.exportAll = true;
 
 var testArray = [
     {name: 'messageq_multi', copts: "-D BENCHMARK", buildPlatforms: ["ti.platform.omap4430.core0"]},
+    {name: 'messageq_multi', copts: "-D BENCHMARK -D OMAPL138", buildPlatforms: ["ti.platforms.evmOMAPL138:DSP"]},
     {name: 'messageq_socket', buildPlatforms: ["ti.platform.omap4430.core0"]},
     {name: 'messageq_bench', sources: ["messageq_socket.c"], copts: "-D BENCHMARK", buildPlatforms: ["ti.platform.omap4430.core0"]},
     {name: 'nano_test', buildPlatforms: ["ti.platform.omap4430.core0"]},

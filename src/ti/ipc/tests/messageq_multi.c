@@ -64,7 +64,11 @@
 #include <xdc/cfg/global.h>
 
 typedef unsigned int u32;
+#ifdef OMAPL138
+#include <ti/resources/rsc_table_omapl138.h>
+#else
 #include <ti/resources/rsc_table.h>
+#endif
 
 static int numTests = 0;
 

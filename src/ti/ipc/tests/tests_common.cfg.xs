@@ -64,19 +64,26 @@ var nsRemote = xdc.useModule("ti.ipc.namesrv.NameServerRemoteRpmsg");
 NameServer.SetupProxy = nsRemote;
 
 xdc.loadPackage('ti.ipc.namesrv');
-xdc.loadPackage('ti.ipc.family.omap4430');
+if (Program.platformName.match(/OMAPL138/)) {
+    xdc.loadPackage('ti.ipc.family.omapl138');
+}
+else {
+    xdc.loadPackage('ti.ipc.family.omap4430');
+}
 
 /* Reduces code size, by only pulling in modules explicitly referenced: */
 BIOS.libType    = BIOS.LibType_Custom;
 
-/* Modules used in Power Management */
-xdc.loadPackage('ti.pm');
-var Power = xdc.useModule('ti.sysbios.family.arm.ducati.omap4430.Power');
-Power.loadSegment = "PM_DATA";
+if (!Program.platformName.match(/OMAPL138/)) {
+    /* Modules used in Power Management */
+    xdc.loadPackage('ti.pm');
+    var Power = xdc.useModule('ti.sysbios.family.arm.ducati.omap4430.Power');
+    Power.loadSegment = "PM_DATA";
 
-var Idle = xdc.useModule('ti.sysbios.knl.Idle');
-/* IpcPower idle function must be at the end */
-Idle.addFunc('&IpcPower_idle');
+    var Idle = xdc.useModule('ti.sysbios.knl.Idle');
+    /* IpcPower idle function must be at the end */
+    Idle.addFunc('&IpcPower_idle');
+}
 
 var Assert = xdc.useModule('xdc.runtime.Assert');
 var Defaults = xdc.useModule('xdc.runtime.Defaults');
@@ -109,23 +116,42 @@ TransportVirtio.common$.diags_ENTRY = Diags.ALWAYS_OFF;
 TransportVirtio.common$.diags_EXIT  = Diags.ALWAYS_OFF;
 TransportVirtio.common$.diags_INFO  = Diags.ALWAYS_OFF;
 TransportVirtio.common$.diags_STATUS = Diags.ALWAYS_OFF;
+TransportVirtio.common$.diags_USER1 = Diags.ALWAYS_OFF;
 
-var VirtQueue = xdc.useModule('ti.ipc.family.omap4430.VirtQueue');
-VirtQueue.common$.diags_ENTRY = Diags.ALWAYS_OFF;
-VirtQueue.common$.diags_EXIT  = Diags.ALWAYS_OFF;
-VirtQueue.common$.diags_USER1 = Diags.ALWAYS_OFF;
+if (Program.platformName.match(/OMAPL138/)) {
+    var VirtQueue = xdc.useModule('ti.ipc.family.omapl138.VirtQueue');
+    VirtQueue.common$.diags_ENTRY = Diags.ALWAYS_OFF;
+    VirtQueue.common$.diags_EXIT  = Diags.ALWAYS_OFF;
+    VirtQueue.common$.diags_USER1 = Diags.ALWAYS_OFF;
 
-var InterruptM3 = xdc.useModule('ti.ipc.family.omap4430.InterruptM3');
-InterruptM3.common$.diags_ENTRY = Diags.ALWAYS_OFF;
-InterruptM3.common$.diags_EXIT  = Diags.ALWAYS_OFF;
-InterruptM3.common$.diags_USER1 = Diags.ALWAYS_OFF;
+    var InterruptDsp = xdc.useModule('ti.ipc.family.omapl138.InterruptDsp');
+    InterruptDsp.common$.diags_ENTRY = Diags.ALWAYS_OFF;
+    InterruptDsp.common$.diags_EXIT  = Diags.ALWAYS_OFF;
+    InterruptDsp.common$.diags_USER1 = Diags.ALWAYS_OFF;
+}
+else {
+    var VirtQueue = xdc.useModule('ti.ipc.family.omap4430.VirtQueue');
+    VirtQueue.common$.diags_ENTRY = Diags.ALWAYS_OFF;
+    VirtQueue.common$.diags_EXIT  = Diags.ALWAYS_OFF;
+    VirtQueue.common$.diags_USER1 = Diags.ALWAYS_OFF;
+
+    var InterruptM3 = xdc.useModule('ti.ipc.family.omap4430.InterruptM3');
+    InterruptM3.common$.diags_ENTRY = Diags.ALWAYS_OFF;
+    InterruptM3.common$.diags_EXIT  = Diags.ALWAYS_OFF;
+    InterruptM3.common$.diags_USER1 = Diags.ALWAYS_OFF;
+}
 
 var Main = xdc.useModule('xdc.runtime.Main');
 Main.common$.diags_ASSERT = Diags.ALWAYS_OFF;
 Main.common$.diags_INTERNAL = Diags.ALWAYS_OFF;
 Main.common$.diags_USER1 = Diags.ALWAYS_OFF;
 
-var Hwi = xdc.useModule('ti.sysbios.family.arm.m3.Hwi');
+if (Program.platformName.match(/OMAPL138/)) {
+    var Hwi = xdc.useModule('ti.sysbios.family.c64p.Hwi');
+}
+else {
+    var Hwi = xdc.useModule('ti.sysbios.family.arm.m3.Hwi');
+}
 Hwi.enableException = true;
 
 /*
