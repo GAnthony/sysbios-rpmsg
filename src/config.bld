@@ -75,8 +75,39 @@ M3.platforms = [
                ];
 M3.platform = M3.platforms[0];
 
+var evmOMAPL138_ExtMemMap = {
+    DDR: {
+        name: "DDR",
+        base: 0xc4000000,
+        len:  0x00800000,
+        space: "code/data"
+    },
+};
+
+Build.platformTable["ti.platforms.evmOMAPL138:DSP"] = {
+    externalMemoryMap: [
+        [ "DDR", evmOMAPL138_ExtMemMap.DDR ],
+    ],
+    codeMemory: "DDR",
+    dataMemory: "DDR",
+    stackMemory: "DDR",
+    l2Mode: "32k",
+};
+
+
+/* Setup for C674 target */
+var C674 = xdc.useModule('ti.targets.elf.C674');
+C674.rootDir = c6x_cgtools_rootdir;
+C674.ccOpts.suffix += " -mi10 -mo ";
+/* Set default platform and list of all interested platforms for c64T */
+C674.platforms = [
+                     "ti.platforms.evmOMAPL138:DSP",
+                 ];
+C674.platform = C674.platforms[0];
+
 /* Uncomment the required targets */
 Build.targets = [
                     //C64T,
+                    //C674,
                     M3,
                 ];
