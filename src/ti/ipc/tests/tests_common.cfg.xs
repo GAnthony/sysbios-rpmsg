@@ -74,13 +74,14 @@ else {
 /* Reduces code size, by only pulling in modules explicitly referenced: */
 BIOS.libType    = BIOS.LibType_Custom;
 
+var Idle = xdc.useModule('ti.sysbios.knl.Idle');
+Idle.addFunc('&VirtQueue_cacheWb');
 if (!Program.platformName.match(/OMAPL138/)) {
     /* Modules used in Power Management */
     xdc.loadPackage('ti.pm');
     var Power = xdc.useModule('ti.sysbios.family.arm.ducati.omap4430.Power');
     Power.loadSegment = "PM_DATA";
 
-    var Idle = xdc.useModule('ti.sysbios.knl.Idle');
     /* IpcPower idle function must be at the end */
     Idle.addFunc('&IpcPower_idle');
 }

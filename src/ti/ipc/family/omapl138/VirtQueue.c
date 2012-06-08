@@ -428,7 +428,6 @@ Void VirtQueue_Instance_finalize(VirtQueue_Object *vq, Int status)
  */
 Void VirtQueue_startup(UInt16 remoteProcId, Bool isHost)
 {
-    Int i;
     IInterrupt_IntInfo intInfo;
 
     hostProcId      = MultiProc_getId("HOST");
@@ -444,6 +443,7 @@ Void VirtQueue_startup(UInt16 remoteProcId, Bool isHost)
     if (MultiProc_self() == dspProcId) {
         InterruptDsp_intRegister(remoteProcId, &intInfo, (Fxn)VirtQueue_isr, NULL);
     }
+    Log_print0(Diags_USER1, "Passed VirtQueue_startup\n");
 }
 
 /* By convention, Host VirtQueues host are the even number in the pair */
@@ -486,12 +486,16 @@ Void postCrashToMailbox(Error_Block * eb)
  */
 Void VirtQueue_cacheWb()
 {
-    static UInt32 oldticks;
+    static UInt32 oldticks = 0;
+    UInt32 newticks;
 
-    if (Clock_getTicks() >= (oldticks + CACHE_WB_TICK_PERIOD)) {
+    newticks = Clock_getTicks();
+    if (newticks - oldticks < (UInt32)CACHE_WB_TICK_PERIOD) {
         /* Don't keep flushing cache */
         return;
     }
+
+    oldticks = newticks;
 
     /* Flush the cache */
     Cache_wbAll();

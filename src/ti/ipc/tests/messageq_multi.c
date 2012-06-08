@@ -160,7 +160,7 @@ Void tsk1Fxn(UArg arg0, UArg arg1)
     myIpcDetach(procId);
 
     System_printf("Multi Thread Test complete!\n");
-    System_exit(0);
+    System_flush();
 }
 
 /*

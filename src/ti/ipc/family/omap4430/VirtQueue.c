@@ -604,12 +604,16 @@ Void postCrashToMailbox(Error_Block * eb)
  */
 Void VirtQueue_cacheWb()
 {
-    static UInt32 oldticks;
+    static UInt32 oldticks = 0;
+    UInt32 newticks;
 
-    if (Clock_getTicks() >= (oldticks + CACHE_WB_TICK_PERIOD)) {
+    newticks = Clock_getTicks();
+    if (newticks - oldticks < (UInt32)CACHE_WB_TICK_PERIOD) {
         /* Don't keep flushing cache */
         return;
     }
+
+    oldticks = newticks;
 
     /* Flush the cache */
     Cache_wbAll();
