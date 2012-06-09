@@ -36,7 +36,8 @@
 
 #include <xdc/std.h>
 #include <xdc/runtime/Assert.h>
-#include <xdc/runtime/System.h>
+#include <xdc/runtime/Log.h>
+#include <xdc/runtime/Diags.h>
 
 #include <ti/sysbios/family/c64p/Hwi.h>
 
@@ -151,6 +152,10 @@ Void InterruptDsp_intUnregister(UInt16 remoteProcId,
 Void InterruptDsp_intSend(UInt16 remoteProcId, IInterrupt_IntInfo *intInfo,
                           UArg arg)
 {
+    Log_print2(Diags_USER1,
+        "InterruptDsp_intSend: Sending interrupt with payload 0x%x to proc #%d",
+        (IArg)arg, (IArg)remoteProcId);
+
     if (remoteProcId == MultiProc_getId("HOST")) {
         REG32(SYSCFG_CHIPSIG) = SYSCFG_CHIPINT0;
     }
@@ -180,11 +185,11 @@ Void InterruptDsp_isr(UArg arg)
 {
     UArg payload;
 
-System_printf("InterruptDsp_isr:\n");
-
     payload = InterruptDsp_intClear(arg, NULL);
     if (payload != InterruptDsp_INVALIDPAYLOAD) {
-System_printf("   calling userFxn: 0x%x\n", userFxn);
+        Log_print1(Diags_USER1,
+            "InterruptDsp_isr: Interrupt received, payload = 0x%x",
+            (IArg)payload);
         userFxn(payload);
     }
 }
