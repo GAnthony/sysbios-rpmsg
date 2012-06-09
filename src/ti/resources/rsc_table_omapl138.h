@@ -154,11 +154,6 @@ struct resource_table {
 	struct fw_rsc_vdev_vring rpmsg_vring0;
 	struct fw_rsc_vdev_vring rpmsg_vring1;
 
-	/* console vdev entry */
-	struct fw_rsc_vdev console_vdev;
-	struct fw_rsc_vdev_vring console_vring0;
-	struct fw_rsc_vdev_vring console_vring1;
-
 	/* data carveout entry */
 	struct fw_rsc_carveout data_cout;
 
@@ -174,12 +169,11 @@ extern char * xdc_runtime_SysMin_Module_State_0_outbuf__A;
 
 struct resource_table resources = {
 	1, /* we're the first version that implements this */
-	4, /* number of entries in the table */
+	3, /* number of entries in the table */
 	0, 0, /* reserved, must be zero */
 	/* offsets to entries */
 	{
 		offsetof(struct resource_table, rpmsg_vdev),
-		offsetof(struct resource_table, console_vdev),
 		offsetof(struct resource_table, data_cout),
 		offsetof(struct resource_table, trace),
 	},
@@ -193,16 +187,6 @@ struct resource_table resources = {
 	/* the two vrings */
 	{ RPMSG_VRING0_DA, 4096, RPMSG_VQ0_SIZE, 1, 0 },
 	{ RPMSG_VRING1_DA, 4096, RPMSG_VQ1_SIZE, 2, 0 },
-
-	/* console vdev entry */
-	{
-		TYPE_VDEV, VIRTIO_ID_CONSOLE, 3,
-		0, 0, 0, 0, 2, { 0, 0 },
-		/* no config data */
-	},
-	/* the two vrings */
-	{ CONSOLE_VRING0_DA, 4096, CONSOLE_VQ0_SIZE, 4, 0 },
-	{ CONSOLE_VRING1_DA, 4096, CONSOLE_VQ1_SIZE, 5, 0 },
 
 	{
 		TYPE_CARVEOUT, DATA_DA, DATA_DA, DATA_SIZE, 0, 0, "IPU_MEM_DATA",
