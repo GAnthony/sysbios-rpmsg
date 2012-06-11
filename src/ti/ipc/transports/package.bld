@@ -58,10 +58,13 @@ var trgFilter_674 = {
 
 /* generate makefiles */
 arguments = ["profile=debug platform=all"];
+Pkg.attrs.copts= '-D OMAP4430';
 commonBld.buildLibs(objList_m3, undefined, trgFilter_m3, arguments);
+Pkg.attrs.copts= '-D OMAPL138';
 commonBld.buildLibs(objList_674, undefined, trgFilter_674, arguments);
 
 arguments = ["profile=release platform=all"];
+Pkg.attrs.copts= '-D OMAP4430';
 commonBld.buildLibs(objList_m3, undefined, trgFilter_m3, arguments);
+Pkg.attrs.copts= '-D OMAPL138';
 commonBld.buildLibs(objList_674, undefined, trgFilter_674, arguments);
-

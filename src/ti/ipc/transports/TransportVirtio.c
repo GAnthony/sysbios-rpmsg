@@ -89,7 +89,11 @@
 #include <ti/ipc/rpmsg/virtio_ring.h>
 #include <ti/ipc/rpmsg/Rpmsg.h>
 /* TBD: VirtQueue.h needs to live in a common directory, not family specific.*/
+#ifdef OMAPL138
 #include <ti/ipc/family/omapl138/VirtQueue.h>
+#elif OMAP4430
+#include <ti/ipc/family/omap4430/VirtQueue.h>
+#endif
 
 #include <ti/ipc/namesrv/_NameServerRemoteRpmsg.h>
 
