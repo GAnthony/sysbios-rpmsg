@@ -113,8 +113,7 @@ SYSLINK 3 Branch:
 This is a prototype of a BIOS IPC transport for MessageQ, over vrings.
 
 It currently supports communication:
-- Linux A9 to BIOS Ducati sysM3 (CORE0);
-- Ducati AppM3 (CORE1) to sysM3 (CORE0).
+- Linux A9 to BIOS (CORE0);
 
 This requires Linux side MessageQ source code currently found in:
         https://github.com/GAnthony/syslink3
@@ -123,5 +122,4 @@ See the README there for build/load/test instructions.
 
 Current Constraints:
 * This is currently *not* compatible with MessageQCopy;
-* Only sends to a MessageQ endpoint on Linux side at rpmsg chnl = 1024.
 
