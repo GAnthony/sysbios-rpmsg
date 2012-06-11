@@ -98,7 +98,7 @@ Build.platformTable["ti.platforms.evmOMAPL138:DSP"] = {
 /* Setup for C674 target */
 var C674 = xdc.useModule('ti.targets.elf.C674');
 C674.rootDir = c6x_cgtools_rootdir;
-C674.ccOpts.suffix += " -mi10 -mo ";
+C674.ccOpts.suffix += " -mi10 -mo --gcc ";
 /* Set default platform and list of all interested platforms for c64T */
 C674.platforms = [
                      "ti.platforms.evmOMAPL138:DSP",
