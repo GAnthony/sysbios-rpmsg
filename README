@@ -43,29 +43,31 @@ TOOLS
 
     o See the Makefile and src/config.bld for the current versions of dependencies and tools, and replace versions in the links below:
        1) BIOS:  
-          Public Links:-
-            Linux:   http://software-dl.ti.com/dsps/dsps_public_sw/sdo_sb/targetcontent/bios/sysbios/6_32_01_38/exports/bios_setuplinux_6_32_01_38.bin
-            Windows: http://software-dl.ti.com/dsps/dsps_public_sw/sdo_sb/targetcontent/bios/sysbios/6_32_01_38/exports/bios_setupwin32_6_32_01_38.exe
-          TI Internal Links:-
-            Linux:   http://www.sanb.design.ti.com//tisb_releases//BIOS/6_32_01_38/exports/bios_setuplinux_6_32_01_38.bin
-            Windows: http://www.sanb.design.ti.com//tisb_releases//BIOS/6_32_01_38/exports/bios_setupwin32_6_32_01_38.exe
+          Public Link:-
+            http://software-dl.ti.com/dsps/dsps_public_sw/sdo_sb/targetcontent/bios/sysbios/index.html
+          TI Internal Link:-
+            Linux:   http://www.sanb.design.ti.com/tisb_releases/BIOS/<version>/
 
-       2) XDC: 
-          Public Links:-
-            Linux:   http://software-dl.ti.com/dsps/dsps_public_sw/sdo_sb/targetcontent/rtsc/3_22_01_21/exports/xdctools_setuplinux_3_22_01_21.bin
-            Windows: http://software-dl.ti.com/dsps/dsps_public_sw/sdo_sb/targetcontent/rtsc/3_22_01_21/exports/xdctools_setupwin32_3_22_01_21.exe
-          TI Internal Links:-
-            Linux:   http://www.sanb.design.ti.com//tisb_releases//XDCtools/3_22_01_21/exports/xdctools_setuplinux_3_22_01_21.bin
-            Windows: http://www.sanb.design.ti.com//tisb_releases//XDCtools/3_22_01_21/exports/xdctools_setupwin32_3_22_01_21.exe
+       2) IPC:  
+          Public Link:-
+            http://software-dl.ti.com/dsps/dsps_public_sw/sdo_sb/targetcontent/ipc/index.html
+          TI Internal Link:-
+            Linux:   http://www.sanb.design.ti.com/tisb_releases/IPC/<version>/
 
-       3) CGT TMS470: 
+       3) XDC: 
+          Public Link:-
+            http://software-dl.ti.com/dsps/dsps_public_sw/sdo_sb/targetcontent/rtsc/index.html
+          TI Internal Link:-
+            http://www.sanb.design.ti.com/tisb_releases/XDCtools/<version>/
+
+       4) CGT TMS470: 
           Public Links:-
             TMS470 Compiler is not available for free publicly. Please contact your TI representative.
          TI Internal Links:-
             Linux:   http://syntaxerror.dal.design.ti.com/release/releases/arm/rel4_9_0/build/install/ti_cgt_tms470_4.9.0_setup_linux_x86.bin
             Windows: http://syntaxerror.dal.design.ti.com/release/releases/arm/rel4_9_0/build/install/ti_cgt_tms470_4.9.0_setup_win32.exe
 
-       4) CGT C6000: 
+       5) CGT C6000: 
           Public Links:-
             Please pick the appropriate version from the above public link.
           TI Internal Links:-
