@@ -147,7 +147,7 @@ enum {
 #define ID_A9_TO_APPM3      201
 #endif
 
-static struct VirtQueue_Object *queueRegistry[NUM_QUEUES];
+static VirtQueue_Object *queueRegistry[NUM_QUEUES] = {NULL};
 
 static UInt16 hostProcId;
 static UInt16 dspProcId;
