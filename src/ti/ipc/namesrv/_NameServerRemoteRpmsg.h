@@ -54,6 +54,7 @@ typedef struct NameServerRemote_Msg {
 } NameServerRemote_Msg;
 
 #define NAME_SERVER_RPMSG_ADDR  0
+#define NAME_SERVER_PORT_INVALID (-1)
 
 #define NAMESERVER_MSG_TOKEN   0x5678abcd
 

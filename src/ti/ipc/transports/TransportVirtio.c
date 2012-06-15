@@ -252,7 +252,6 @@ Int TransportVirtio_Instance_init(TransportVirtio_Object *obj,
     /* set object fields */
     obj->priority     = params->priority;
     obj->remoteProcId = remoteProcId;
-    obj->name_server_port = (-1);
 
     /* From the remoteProcId, we must determine if this Virtio Transport is
      * acting as host or a slave.
@@ -498,6 +497,7 @@ Void TransportVirtio_swiFxn(UArg arg0, UArg arg1)
     Bool              buf_avail = FALSE;
     Rpmsg_NsMsg       * nsMsg; /* Name Service Message */
     NameServerRemote_Msg * nsrMsg;  /* Name Server Message */
+    Int               nsPort;
 
     Log_print0(Diags_ENTRY, "--> "FXNN);
 
@@ -523,15 +523,22 @@ Void TransportVirtio_swiFxn(UArg arg0, UArg arg1)
         if (rpMsg->dstAddr != RPMSG_MESSAGEQ_PORT) {
             if (rpMsg->dstAddr == RPMSG_NAMESERVICE_PORT) {
                 nsMsg = (Rpmsg_NsMsg *)rpMsg->payload;
-                Log_print2(Diags_INFO, FXNN": ns announcement "
-                        "from %d: %s\n", nsMsg->addr, (IArg)nsMsg->name);
+                Log_print3(Diags_USER1, FXNN": ns announcement "
+                  "from %d: %s, flag: %s\n",
+                  nsMsg->addr, (IArg)nsMsg->name,
+                  (IArg)(nsMsg->flags == RPMSG_NS_CREATE? "create":"destroy"));
                 /* ... and if it is from our rpmsg-proto socket, save
                  * the rpmsg src address as the NameServer reply address:
                  */
                 if (!strcmp(nsMsg->name, RPMSG_SOCKET_NAME) &&
                     rpMsg->srcAddr == NAME_SERVER_RPMSG_ADDR) {
-                    NameServerRemote_SetNameServerPort(rpMsg->srcAddr);
-                    obj->name_server_port = rpMsg->srcAddr;
+                    if (nsMsg->flags == RPMSG_NS_CREATE) {
+                        nsPort = NAME_SERVER_RPMSG_ADDR;
+                    }
+                    else if (nsMsg->flags  == RPMSG_NS_DESTROY) {
+                        nsPort = NAME_SERVER_PORT_INVALID;
+                    }
+                    NameServerRemote_SetNameServerPort(nsPort);
                 }
             }
             goto skip;

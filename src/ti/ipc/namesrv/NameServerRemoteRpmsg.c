@@ -174,8 +174,8 @@ Int NameServerRemoteRpmsg_get(NameServerRemoteRpmsg_Object *obj,
     /* enter gate - prevent multiple threads from entering */
     key = GateMutex_enter(gateMutex);
 
-    /* First, check to see that NameServer is started remotely: */
-    if (NameServerRemoteRpmsg_module->nsPort == (-1)) {
+    /* Check that host NameServer is alive to avoid pinging the host: */
+    if (NameServerRemoteRpmsg_module->nsPort == NAME_SERVER_PORT_INVALID) {
         status = NameServer_E_RESOURCE;
         goto exit;
     }
