@@ -72,24 +72,27 @@
 #define INPUT_MSG_DATASIZE \
    (INPUT_MSGQ_ALLOCSIZE - sizeof(MessageQ_MsgHeader))
 
-/* Returned payloads are 1/4 of RPMSG_BUF_SIZE - rpmsg and MessageQ hdrs: */
-#define OUTPUT_MSG_DATASIZE ((HEAP_MSGSIZE-16-32) / 4)
+#define OUTPUT_MSG_DATASIZE (4)
 #define OUTPUT_MSG_ALLOCSIZE \
     (OUTPUT_MSG_DATASIZE + sizeof(MessageQ_MsgHeader))
 
 
 typedef unsigned int u32;
+#ifdef OMAPL138
+#include <ti/resources/rsc_table_omapl138.h>
+#else
 #include <ti/resources/rsc_table.h>
+#endif
 
 /* Application message structures: */
 typedef struct {
     MessageQ_MsgHeader	hdr;
-    UInt8               data[];
+    ULong               data;
 } InputMsg;
 
 typedef struct {
     MessageQ_MsgHeader	hdr;
-    UInt8               data[OUTPUT_MSG_DATASIZE];
+    ULong               data;
 } OutputMsg;
 
 static OutputMsg        outMsg;
@@ -228,8 +231,7 @@ Void tsk1Fxn(UArg arg0, UArg arg1)
             /* Send back the data in 4 chunks: */
             MessageQ_setMsgId ((MessageQ_Msg)&outMsg, i);
             /* Copy data into the ith chunk: */
-            memcpy(&(outMsg.data), inMsg->data + (i * OUTPUT_MSG_DATASIZE),
-                   OUTPUT_MSG_DATASIZE);
+            outMsg.data = inMsg->data + i + 0xf00;
 
             System_printf("Sending msgId: %d, size: %d\n",
                    i, MessageQ_getMsgSize((MessageQ_Msg)&outMsg));
