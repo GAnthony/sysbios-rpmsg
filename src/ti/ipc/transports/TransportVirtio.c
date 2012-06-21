@@ -396,7 +396,7 @@ Bool TransportVirtio_put(TransportVirtio_Object *obj, Ptr msg)
     UInt         msgSize;
     Int16        token = (-1);
     IArg         key;
-    Rpmsg_Msg        rpMsg = NULL;
+    Rpmsg_Msg    rpMsg = NULL;
 
     Log_print1(Diags_ENTRY, "--> "FXNN": Entered: isHost: %d",
                  obj->isHost);
@@ -572,6 +572,14 @@ Void TransportVirtio_swiFxn(UArg arg0, UArg arg1)
 
         /* copy the message to the buffer allocated. */
         memcpy((Ptr)buf, (Ptr)msg, msgSize);
+
+        /*
+         * If the message received was statically allocated, reset the
+         * heapId, so the app can free it.
+         */
+         if (msg->heapId == ti_sdo_ipc_MessageQ_STATICMSG)  {
+             msg->heapId = 0;  /* for a copy transport, heap id is 0. */
+         }
 
         /* get the queue id */
         queueId = MessageQ_getDstQueue(msg);
