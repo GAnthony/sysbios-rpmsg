@@ -81,7 +81,6 @@ Void InterruptDsp_isr(UArg arg);
  */
 Void InterruptDsp_intEnable(UInt16 remoteProcId, IInterrupt_IntInfo *intInfo)
 {
-//    REG32(MAILBOX_IRQENABLE_SET_DSP) = MAILBOX_REG_VAL(DSP_MBX);
     Hwi_enableInterrupt(DSPINT);
 }
 
@@ -91,7 +90,6 @@ Void InterruptDsp_intEnable(UInt16 remoteProcId, IInterrupt_IntInfo *intInfo)
  */
 Void InterruptDsp_intDisable(UInt16 remoteProcId, IInterrupt_IntInfo *intInfo)
 {
-//    REG32(MAILBOX_IRQENABLE_CLR_DSP) = MAILBOX_REG_VAL(DSP_MBX);
     Hwi_disableInterrupt(DSPINT);
 }
 
@@ -157,6 +155,9 @@ Void InterruptDsp_intSend(UInt16 remoteProcId, IInterrupt_IntInfo *intInfo,
         (IArg)arg, (IArg)remoteProcId);
 
     if (remoteProcId == MultiProc_getId("HOST")) {
+        /* Poll for ack from other side */
+        while (REG32(SYSCFG_CHIPSIG) & SYSCFG_CHIPINT0);
+        /* Interrupt other side: */
         REG32(SYSCFG_CHIPSIG) = SYSCFG_CHIPINT0;
     }
 }
