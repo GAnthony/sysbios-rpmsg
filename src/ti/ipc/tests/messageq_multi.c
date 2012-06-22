@@ -192,21 +192,8 @@ Void loopbackFxn (UArg arg0, UArg arg1)
         System_abort("MessageQ_create failed\n" );
     }
 
-    remoteQueueId = MessageQ_getQueueId(messageQ);
     System_printf("loopbackFxn: created MessageQ: %s; QueueID: 0x%x\n",
 	localQueueName, MessageQ_getQueueId(messageQ));
-
-    /* Open the remote message queue. Spin until it is ready. */
-    System_printf("loopbackFxn: Calling MessageQ_open...\n");
-    do {
-        status = MessageQ_open(hostQueueName, &remoteQueueId);
-        /* 1 second sleep: */
-        Task_sleep(1000);
-    }
-    while (status != MessageQ_S_SUCCESS);
-
-    System_printf("loopbackFxn: Remote MessageQ %s; QueueID: 0x%x\n",
-	hostQueueName, remoteQueueId);
 
     System_printf("Start the main loop: %d\n", arg0);
     while (msgId < NUMLOOPS) {
@@ -215,6 +202,7 @@ Void loopbackFxn (UArg arg0, UArg arg1)
         if (status != MessageQ_S_SUCCESS) {
            System_abort("This should not happen since timeout is forever\n");
         }
+        remoteQueueId = MessageQ_getReplyQueue(getMsg);
 
 #ifndef BENCHMARK
         System_printf("%d: Received message #%d from core %d\n",
@@ -237,6 +225,7 @@ Void loopbackFxn (UArg arg0, UArg arg1)
         msgId++;
     }
     
+    MessageQ_delete(&messageQ);
     numTests += NUMLOOPS;
 
     System_printf("Test thread %d complete!\n", arg0);

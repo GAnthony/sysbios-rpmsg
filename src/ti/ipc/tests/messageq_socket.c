@@ -165,21 +165,8 @@ Void tsk1Fxn(UArg arg0, UArg arg1)
         System_abort("MessageQ_create failed\n" );
     }
 
-    remoteQueueId = MessageQ_getQueueId(messageQ);
     System_printf("tsk1Fxn: created MessageQ: %s; QueueID: 0x%x\n",
 	SLAVE_MESSAGEQNAME, MessageQ_getQueueId(messageQ));
-
-    /* Open the remote message queue. Spin until it is ready. */
-    System_printf("tsk1Fxn: Calling MessageQ_open...\n");
-    do {
-        status = MessageQ_open(HOST_MESSAGEQNAME, &remoteQueueId);
-        /* 1 second sleep: */
-        Task_sleep(1000);
-    }
-    while (status != MessageQ_S_SUCCESS);
-
-    System_printf("tsk1Fxn: Remote MessageQ %s; QueueID: 0x%x\n",
-	HOST_MESSAGEQNAME, remoteQueueId);
 
     System_printf("Start the main loop\n");
     while (msgId < NUMLOOPS) {
@@ -188,6 +175,7 @@ Void tsk1Fxn(UArg arg0, UArg arg1)
         if (status != MessageQ_S_SUCCESS) {
            System_abort("This should not happen since timeout is forever\n");
         }
+        remoteQueueId = MessageQ_getReplyQueue(getMsg);
 
 #ifndef BENCHMARK
         System_printf("Received message #%d from core %d\n",
@@ -208,6 +196,7 @@ Void tsk1Fxn(UArg arg0, UArg arg1)
         }
         msgId++;
     }
+    MessageQ_delete(&messageQ);
     myIpcDetach(procId);
 
     System_printf("Test complete!\n");
