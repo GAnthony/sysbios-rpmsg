@@ -34,6 +34,8 @@
  *
  *  Test for a particular customer use case.
  *
+ *  See <syslink3_repo>/src/tests/nano_test.c for usage.
+ *
  */
 
 #include <xdc/std.h>
@@ -64,18 +66,13 @@
 /*  ----------------------------------- To get globals from .cfg Header */
 #include <xdc/cfg/global.h>
 
+//#define VERBOSE 1
+
 /* Numbers and sizes of input/output messages: */
 #define NUM_SLAVE_MSGS_PER_HOST_MSG   4
 
-#define INPUT_MSG_ALLOCSIZE \
-   (HEAP_MSGSIZE - sizeof(RpMsg_Header))
-#define INPUT_MSG_DATASIZE \
-   (INPUT_MSGQ_ALLOCSIZE - sizeof(MessageQ_MsgHeader))
-
-#define OUTPUT_MSG_DATASIZE (4)
-#define OUTPUT_MSG_ALLOCSIZE \
-    (OUTPUT_MSG_DATASIZE + sizeof(MessageQ_MsgHeader))
-
+#define INPUT_MSG_DATASIZE  (8192)
+#define OUTPUT_MSG_DATASIZE (INPUT_MSG_DATASIZE / NUM_SLAVE_MSGS_PER_HOST_MSG)
 
 typedef unsigned int u32;
 #ifdef OMAPL138
@@ -87,12 +84,12 @@ typedef unsigned int u32;
 /* Application message structures: */
 typedef struct {
     MessageQ_MsgHeader	hdr;
-    ULong               data;
+    Char                *inBuf;
 } InputMsg;
 
 typedef struct {
     MessageQ_MsgHeader	hdr;
-    ULong               data;
+    Char                *outBuf;
 } OutputMsg;
 
 static OutputMsg        outMsg;
@@ -189,37 +186,26 @@ Void tsk1Fxn(UArg arg0, UArg arg1)
         System_abort("MessageQ_create failed\n" );
     }
 
-    remoteQueueId = MessageQ_getQueueId(messageQ);
     System_printf("tsk1Fxn: created MessageQ: %s; QueueID: 0x%x\n",
 	SLAVE_MESSAGEQNAME, MessageQ_getQueueId(messageQ));
 
-    /* Open the remote message queue. Spin until it is ready. */
-    System_printf("tsk1Fxn: Calling MessageQ_open...\n");
-    do {
-        status = MessageQ_open(HOST_MESSAGEQNAME, &remoteQueueId);
-        /* 1 second sleep: */
-        Task_sleep(1000);
-    }
-    while (status != MessageQ_S_SUCCESS);
-
-    System_printf("tsk1Fxn: Remote MessageQ %s; QueueID: 0x%x\n",
-	HOST_MESSAGEQNAME, remoteQueueId);
-
     /* Use a static message for outMsg: no need to call MessageQ_alloc(): */
-    MessageQ_staticMsgInit((MessageQ_Msg)&outMsg, OUTPUT_MSG_ALLOCSIZE); 
+    MessageQ_staticMsgInit((MessageQ_Msg)&outMsg, sizeof(OutputMsg));
 
     System_printf("Start the main loop\n");
     while (1) {
-        /* Get one block (~ 8Kb) of data... */
+        /* Get one block (8Kb) of data passed as a pointer to shared memory */
         status = MessageQ_get(messageQ, (MessageQ_Msg *)&inMsg, 
                               MessageQ_FOREVER);
         if (status != MessageQ_S_SUCCESS) {
            System_abort("This should not happen since timeout is forever\n");
         }
+        remoteQueueId = MessageQ_getReplyQueue(inMsg);
 
-        System_printf ("Received msgId: %d, size: %d\n",
-                        MessageQ_getMsgId(inMsg), MessageQ_getMsgSize(inMsg));
-
+#ifdef VERBOSE
+        System_printf ("Received msgId: %d, inBuf: 0x%x\n",
+                        MessageQ_getMsgId(inMsg), inMsg->inBuf);
+#endif
         /* test id of message received */
         if (MessageQ_getMsgId(inMsg) != msgId) {
             System_printf("Expected msgId: %d, got %d\n", 
@@ -230,12 +216,14 @@ Void tsk1Fxn(UArg arg0, UArg arg1)
         for (i = 0; i < NUM_SLAVE_MSGS_PER_HOST_MSG; i++) {
             /* Send back the data in 4 chunks: */
             MessageQ_setMsgId ((MessageQ_Msg)&outMsg, i);
-            /* Copy data into the ith chunk: */
-            outMsg.data = inMsg->data + i + 0xf00;
 
-            System_printf("Sending msgId: %d, size: %d\n",
-                   i, MessageQ_getMsgSize((MessageQ_Msg)&outMsg));
+            /* Return pointer to ith chunk of data: */
+            outMsg.outBuf = inMsg->inBuf + i * OUTPUT_MSG_DATASIZE;
 
+#ifdef VERBOSE
+            System_printf("Sending msgId: %d, outBuf: 0x%x\n",
+                   i, outMsg.outBuf);
+#endif
             status = MessageQ_put(remoteQueueId, (MessageQ_Msg)&outMsg);
             if (status != MessageQ_S_SUCCESS) {
                System_abort("MessageQ_put had a failure/error\n");
@@ -244,10 +232,6 @@ Void tsk1Fxn(UArg arg0, UArg arg1)
         MessageQ_free ((MessageQ_Msg)inMsg);
         msgId++;
     }
-    myIpcDetach(procId);
-
-    System_printf("Test complete!\n");
-    System_exit(0);
 }
 
 /*
