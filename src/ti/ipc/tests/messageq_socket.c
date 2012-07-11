@@ -38,33 +38,15 @@
  *      tools/messageq_socket in rpmsg_3.2_rc4 branch of upstream-rpmsg.
  *
  */
-
 #include <xdc/std.h>
-#include <string.h>
-
-/*  -----------------------------------XDC.RUNTIME module Headers    */
-#include <xdc/runtime/Error.h>
 #include <xdc/runtime/Assert.h>
-#include <xdc/runtime/Memory.h>
 #include <xdc/runtime/System.h>
-#include <xdc/runtime/IHeap.h>
-#include <xdc/runtime/Diags.h>
 
-/*  ----------------------------------- IPC module Headers           */
-#include <ti/sdo/utils/_NameServer.h>
-#include <ti/ipc/MessageQ.h>
-#include <ti/ipc/MultiProc.h>
-#include <ti/ipc/transports/TransportVirtioSetup.h>
-#include <ti/ipc/rpmsg/Rpmsg.h>
-#include <ti/ipc/transports/_TransportVirtio.h>
-
-/*  ----------------------------------- BIOS6 module Headers         */
 #include <ti/sysbios/BIOS.h>
 #include <ti/sysbios/knl/Task.h>
-#include <ti/sysbios/heaps/HeapBuf.h>
+#include <ti/sysbios/knl/Clock.h>
 
-/*  ----------------------------------- To get globals from .cfg Header */
-#include <xdc/cfg/global.h>
+#include <ti/ipc/MessageQ.h>
 
 typedef unsigned int u32;
 #ifdef OMAPL138
@@ -73,73 +55,9 @@ typedef unsigned int u32;
 #include <ti/resources/rsc_table.h>
 #endif
 
+#define SLAVE_MESSAGEQNAME "SLAVE"
 
-void myNameMap_register(Char * name, UInt32 port)
-{
-    System_printf("registering %s service on %d with HOST\n", name, port);
-    nameService_register(name, port, RPMSG_NS_CREATE);
-}
-
-void myNameMap_unregister(Char * name, UInt32 port)
-{
-    System_printf("unregistering %s service on %d with HOST\n", name, port);
-    nameService_register(name, port, RPMSG_NS_DESTROY);
-}
-
-/*
- * This to get TransportVirtio_attach() and NameServerRemoteRpmsg_attach()
- * called in lieu of using Ipc_start().
- * Must be done after BIOS_start(), as TransportVirtio startup relies on
- * passing an interrupt handshake.
- */
-void myIpcAttach(UInt procId)
-{
-    Int     status;
-
-    /* call TransportVirtioSetup to attach to remote processor */
-    status = TransportVirtioSetup_attach(procId, 0);
-    Assert_isTrue(status >= 0, NULL);
-
-    /* call NameServer_attach to remote processor */
-    status = ti_sdo_utils_NameServer_SetupProxy_attach(procId, 0);
-    Assert_isTrue(status >= 0, NULL);
-
-    /*
-     * Tell the Linux host we have a MessageQ service over rpmsg.
-     *
-     * TBD: This should be in the VirtioTransport initialization, but we need
-     * an interrupt handshake after BIOS_start().
-     * TBD: Also, NameMap should go over a bare rpmsg API, rather than
-     * MessageQCopy, as this clashes with MessageQ.
-     */
-    myNameMap_register("rpmsg-proto", RPMSG_MESSAGEQ_PORT);
-}
-
-/*
- * This to get TransportVirtio_detach() and NameServerRemoteRpmsg_detach()
- * called in lieu of using Ipc_start().
- */
-void myIpcDetach(UInt procId)
-{
-    Int     status;
-
-    /* call TransportVirtioSetup to detach from remote processor */
-    status = TransportVirtioSetup_detach(procId);
-    Assert_isTrue(status >= 0, NULL);
-
-    /* call NameServer_detach from remote processor */
-    status = ti_sdo_utils_NameServer_SetupProxy_detach(procId);
-    Assert_isTrue(status >= 0, NULL);
-
-    /*
-     * Tell the host MessageQ service over rpmsg is going away.
-     *
-     * TBD: This should be in the VirtioTransport module.
-     * Also, NameMap should go over a bare rpmsg API, rather than
-     * MessageQCopy, as this clashes with MessageQ.
-     */
-    myNameMap_unregister("rpmsg-proto", RPMSG_MESSAGEQ_PORT);
-}
+#define MessageQ_payload(m) ((void *)((char *)(m) + sizeof(MessageQ_MsgHeader)))
 
 /*
  *  ======== tsk1Fxn ========
@@ -147,60 +65,70 @@ void myIpcDetach(UInt procId)
  */
 Void tsk1Fxn(UArg arg0, UArg arg1)
 {
-    MessageQ_Msg     getMsg;
+    MessageQ_Msg msg;
     MessageQ_Handle  messageQ;
     MessageQ_QueueId remoteQueueId;
-    Int              status;
-    UInt16           msgId = 0;
-    UInt             procId = MultiProc_getId("HOST");
+    UInt16 procId;
+    Int status;
+    UInt16 msgId;
+    UInt32 start;
+    UInt32 end;
+    Uint32 numLoops;
+    UInt32 print;
+    UInt32 *params;
 
-    System_printf("tsk1Fxn: In tsk1Fxn.\n");
-
-    /* Get our Transport loaded in absence of Ipc module: */
-    myIpcAttach(procId);
-
-    /* Create a message queue. */
     messageQ = MessageQ_create(SLAVE_MESSAGEQNAME, NULL);
     if (messageQ == NULL) {
         System_abort("MessageQ_create failed\n" );
     }
 
     System_printf("tsk1Fxn: created MessageQ: %s; QueueID: 0x%x\n",
-	SLAVE_MESSAGEQNAME, MessageQ_getQueueId(messageQ));
+        SLAVE_MESSAGEQNAME, MessageQ_getQueueId(messageQ));
 
-    System_printf("Start the main loop\n");
-    while (msgId < NUMLOOPS) {
-        /* Get a message */
-        status = MessageQ_get(messageQ, &getMsg, MessageQ_FOREVER);
-        if (status != MessageQ_S_SUCCESS) {
-           System_abort("This should not happen since timeout is forever\n");
-        }
-        remoteQueueId = MessageQ_getReplyQueue(getMsg);
+    while (1) {
+        /* handshake with host to get starting parameters */
+        System_printf("Awaiting sync message from host...\n");
+        MessageQ_get(messageQ, &msg, MessageQ_FOREVER);
 
-#ifndef BENCHMARK
-        System_printf("Received message #%d from core %d\n",
-                     MessageQ_getMsgId(getMsg), procId);
-#endif
-        /* test id of message received */
-        if (MessageQ_getMsgId(getMsg) != msgId) {
-            System_abort("The id received is incorrect!\n");
-        }
+        params = MessageQ_payload(msg);
+        numLoops = params[0];
+        print = params[1];
 
-#ifndef BENCHMARK
-        /* Send it back */
-        System_printf("Sending message Id #%d to core %d\n", msgId, procId);
-#endif
-        status = MessageQ_put(remoteQueueId, getMsg);
-        if (status != MessageQ_S_SUCCESS) {
-           System_abort("MessageQ_put had a failure/error\n");
+        remoteQueueId = MessageQ_getReplyQueue(msg);
+        procId = MessageQ_getProcId(remoteQueueId);
+
+        System_printf("Received msg from (procId:remoteQueueId): 0x%x:0x%x"
+            "\tpayload: %d bytes; loops: %s printing \n",
+            procId, remoteQueueId,
+            (MessageQ_getMsgSize(msg) - sizeof(MessageQ_MsgHeader)),
+            numLoops, print ? "with" : "without");
+
+        MessageQ_put(remoteQueueId, msg);
+
+        start = Clock_getTicks();
+        for (msgId = 0; msgId < numLoops; msgId++) {
+            status = MessageQ_get(messageQ, &msg, MessageQ_FOREVER);
+            Assert_isTrue(status == MessageQ_S_SUCCESS, NULL);
+
+            if (print) {
+                System_printf("Got msg #%d (%d bytes) from core %d\n",
+                    MessageQ_getMsgId(msg), msg->msgSize, procId);
+            }
+
+            Assert_isTrue(MessageQ_getMsgId(msg) == msgId, NULL);
+
+            if (print) {
+                System_printf("Sending msg Id #%d to core %d\n", msgId, procId);
+            }
+
+            status = MessageQ_put(remoteQueueId, msg);
+            Assert_isTrue(status == MessageQ_S_SUCCESS, NULL);
         }
-        msgId++;
+        end = Clock_getTicks();
+
+        System_printf("%d iterations took %d ticks or %d usecs/msg\n", numLoops,
+            end - start, ((end - start) * Clock_tickPeriod) / numLoops);
     }
-    MessageQ_delete(&messageQ);
-    myIpcDetach(procId);
-
-    System_printf("Test complete!\n");
-    System_flush();
 }
 
 /*
@@ -208,40 +136,12 @@ Void tsk1Fxn(UArg arg0, UArg arg1)
  */
 Int main(Int argc, Char* argv[])
 {
-    Error_Block            eb;
-    Ptr                    buf;
-    HeapBuf_Handle         heapHandle;
-    HeapBuf_Params         heapBufParams;
-
+    System_printf("main: MultiProc id = %d (%s)\n", MultiProc_self(), __TIME__);
     System_printf("%d resources at 0x%x\n", resources.num, resources);
 
-    /* Initialize the Error_Block. This is required before using it */
-    Error_init(&eb);
-
-    System_printf("main: MultiProc id = %d\n", MultiProc_self());
-
-    buf = Memory_alloc(0, (HEAP_NUMMSGS * HEAP_MSGSIZE) + HEAP_ALIGN, 8, &eb);
-    if (buf == NULL) {
-        System_abort("Memory_alloc failed\n" );
-    }
-
-    /*
-     *  Create the heap that will be used to allocate messages.
-     */
-    HeapBuf_Params_init(&heapBufParams);
-    heapBufParams.align          = 8;
-    heapBufParams.numBlocks      = HEAP_NUMMSGS;
-    heapBufParams.blockSize      = HEAP_MSGSIZE;
-    heapBufParams.bufSize        = HEAP_NUMMSGS * HEAP_MSGSIZE;
-    heapBufParams.buf            = buf;
-    heapHandle = HeapBuf_create(&heapBufParams, &eb);
-    if (heapHandle == NULL) {
-        System_abort("HeapBuf_create failed\n" );
-    }
-
-    /* Register this heap with MessageQ */
-    MessageQ_registerHeap((IHeap_Handle)(heapHandle), HEAPID);
+    Task_create(tsk1Fxn, NULL, NULL);
 
     BIOS_start();
+
     return (0);
- }
+}

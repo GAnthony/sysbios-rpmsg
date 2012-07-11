@@ -39,40 +39,14 @@
  */
 
 #include <xdc/std.h>
-#include <string.h>
-
-/*  -----------------------------------XDC.RUNTIME module Headers    */
-#include <xdc/runtime/Error.h>
 #include <xdc/runtime/Assert.h>
-#include <xdc/runtime/Memory.h>
 #include <xdc/runtime/System.h>
-#include <xdc/runtime/IHeap.h>
-#include <xdc/runtime/Diags.h>
 
-/*  ----------------------------------- IPC module Headers           */
-#include <ti/sdo/utils/_NameServer.h>
-#include <ti/ipc/MessageQ.h>
-#include <ti/ipc/MultiProc.h>
-#include <ti/ipc/transports/TransportVirtioSetup.h>
-#include <ti/ipc/rpmsg/Rpmsg.h>
-#include <ti/ipc/transports/_TransportVirtio.h>
-#include <ti/ipc/family/omap4430/VirtQueue.h>
-
-/*  ----------------------------------- BIOS6 module Headers         */
 #include <ti/sysbios/BIOS.h>
 #include <ti/sysbios/knl/Task.h>
-#include <ti/sysbios/heaps/HeapBuf.h>
+#include <ti/sysbios/knl/Clock.h>
 
-/*  ----------------------------------- To get globals from .cfg Header */
-#include <xdc/cfg/global.h>
-
-//#define VERBOSE 1
-
-/* Numbers and sizes of input/output messages: */
-#define NUM_SLAVE_MSGS_PER_HOST_MSG   4
-
-#define INPUT_MSG_DATASIZE  (8192)
-#define OUTPUT_MSG_DATASIZE (INPUT_MSG_DATASIZE / NUM_SLAVE_MSGS_PER_HOST_MSG)
+#include <ti/ipc/MessageQ.h>
 
 typedef unsigned int u32;
 #ifdef OMAPL138
@@ -80,6 +54,16 @@ typedef unsigned int u32;
 #else
 #include <ti/resources/rsc_table.h>
 #endif
+#include <xdc/std.h>
+
+//#define VERBOSE 1
+
+#define NUM_SLAVE_MSGS_PER_HOST_MSG   4
+
+#define SLAVE_MESSAGEQNAME "SLAVE"
+
+#define INPUT_MSG_DATASIZE  (8192)
+#define OUTPUT_MSG_DATASIZE (INPUT_MSG_DATASIZE / NUM_SLAVE_MSGS_PER_HOST_MSG)
 
 /* Application message structures: */
 typedef struct {
@@ -94,73 +78,6 @@ typedef struct {
 
 static OutputMsg        outMsg;
 
-void myNameMap_register(Char * name, UInt32 port)
-{
-    System_printf("registering %s service on %d with HOST\n", name, port);
-    nameService_register(name, port, RPMSG_NS_CREATE);
-}
-
-void myNameMap_unregister(Char * name, UInt32 port)
-{
-    System_printf("unregistering %s service on %d with HOST\n", name, port);
-    nameService_register(name, port, RPMSG_NS_DESTROY);
-}
-
-/*
- * This to get TransportVirtio_attach() and NameServerRemoteRpmsg_attach()
- * called in lieu of using Ipc_start().
- * Must be done after BIOS_start(), as TransportVirtio startup relies on
- * passing an interrupt handshake.
- */
-void myIpcAttach(UInt procId)
-{
-    Int     status;
-
-    /* call TransportVirtioSetup to attach to remote processor */
-    status = TransportVirtioSetup_attach(procId, 0);
-    Assert_isTrue(status >= 0, NULL);
-
-    /* call NameServer_attach to remote processor */
-    status = ti_sdo_utils_NameServer_SetupProxy_attach(procId, 0);
-    Assert_isTrue(status >= 0, NULL);
-
-    /*
-     * Tell the Linux host we have a MessageQ service over rpmsg.
-     *
-     * TBD: This should be in the VirtioTransport initialization, but we need
-     * an interrupt handshake after BIOS_start().
-     * TBD: Also, NameMap should go over a bare rpmsg API, rather than
-     * MessageQCopy, as this clashes with MessageQ.
-     */
-    myNameMap_register("rpmsg-proto", RPMSG_MESSAGEQ_PORT);
-}
-
-/*
- * This to get TransportVirtio_detach() and NameServerRemoteRpmsg_detach()
- * called in lieu of using Ipc_start().
- */
-void myIpcDetach(UInt procId)
-{
-    Int     status;
-
-    /* call TransportVirtioSetup to detach from remote processor */
-    status = TransportVirtioSetup_detach(procId);
-    Assert_isTrue(status >= 0, NULL);
-
-    /* call NameServer_detach from remote processor */
-    status = ti_sdo_utils_NameServer_SetupProxy_detach(procId);
-    Assert_isTrue(status >= 0, NULL);
-
-    /*
-     * Tell the host MessageQ service over rpmsg is going away.
-     *
-     * TBD: This should be in the VirtioTransport module.
-     * Also, NameMap should go over a bare rpmsg API, rather than
-     * MessageQCopy, as this clashes with MessageQ.
-     */
-    myNameMap_unregister("rpmsg-proto", RPMSG_MESSAGEQ_PORT);
-}
-
 /*
  *  ======== tsk1Fxn ========
  *  Receive and return messages
@@ -174,11 +91,6 @@ Void tsk1Fxn(UArg arg0, UArg arg1)
     UInt16           msgId = 0;
     UInt             procId = MultiProc_getId("HOST");
     int              i;
-
-    System_printf("tsk1Fxn: Entered\n");
-
-    /* Get our Transport loaded in absence of Ipc module: */
-    myIpcAttach(procId);
 
     /* Create a message queue. */
     messageQ = MessageQ_create(SLAVE_MESSAGEQNAME, NULL);
@@ -239,37 +151,12 @@ Void tsk1Fxn(UArg arg0, UArg arg1)
  */
 Int main(Int argc, Char* argv[])
 {
-    Error_Block            eb;
-    Ptr                    buf;
-    HeapBuf_Handle         heapHandle;
-    HeapBuf_Params         heapBufParams;
-
+    System_printf("main: MultiProc id = %d (%s)\n", MultiProc_self(), __TIME__);
     System_printf("%d resources at 0x%x\n", resources.num, resources);
 
-    /* Initialize the Error_Block. This is required before using it */
-    Error_init(&eb);
-
-    System_printf("main: MultiProc id = %d\n", MultiProc_self());
-
-    buf = Memory_alloc(0, (HEAP_NUMMSGS * HEAP_MSGSIZE) + HEAP_ALIGN, 8, &eb);
-
-    /*
-     *  Create the heap that will be used to allocate messages.
-     */
-    HeapBuf_Params_init(&heapBufParams);
-    heapBufParams.align          = 8;
-    heapBufParams.numBlocks      = HEAP_NUMMSGS;
-    heapBufParams.blockSize      = HEAP_MSGSIZE;
-    heapBufParams.bufSize        = HEAP_NUMMSGS * HEAP_MSGSIZE;
-    heapBufParams.buf            = buf;
-    heapHandle = HeapBuf_create(&heapBufParams, &eb);
-    if (heapHandle == NULL) {
-        System_abort("HeapBuf_create failed\n" );
-    }
-
-    /* Register this heap with MessageQ */
-    MessageQ_registerHeap((IHeap_Handle)(heapHandle), HEAPID);
+    Task_create(tsk1Fxn, NULL, NULL);
 
     BIOS_start();
+
     return (0);
- }
+}
