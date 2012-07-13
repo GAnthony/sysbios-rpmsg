@@ -59,11 +59,9 @@ var testArray = [
     {name: 'messageq_multi', config: 'messageq_common', sources: ["messageq_multi.c", "ipcstartup.c"], copts: "-D BENCHMARK", buildPlatforms: ["ti.platform.omap4430.core0"]},
     {name: 'messageq_multi', config: 'messageq_common', sources: ["messageq_multi.c", "ipcstartup.c"], copts: "-D BENCHMARK -D OMAPL138", buildPlatforms: ["ti.platforms.evmOMAPL138:DSP"]},
 
-    {name: 'messageq_socket', config: 'messageq_common', sources: ["messageq_socket.c", "ipcstartup.c"], buildPlatforms: ["ti.platform.omap4430.core0"]},
-    {name: 'messageq_socket', config: 'messageq_common', sources: ["messageq_socket.c", "ipcstartup.c"], copts: "-D OMAPL138", buildPlatforms: ["ti.platforms.evmOMAPL138:DSP"]},
+    {name: 'messageq_single', config: 'messageq_common', sources: ["messageq_single.c", "ipcstartup.c"], buildPlatforms: ["ti.platform.omap4430.core0"]},
+    {name: 'messageq_single', config: 'messageq_common', sources: ["messageq_single.c", "ipcstartup.c"], copts: "-D OMAPL138", buildPlatforms: ["ti.platforms.evmOMAPL138:DSP"]},
 
-    {name: 'messageq_bench', config: 'messageq_common', sources: ["messageq_socket.c", "ipcstartup.c"], copts: "-D BENCHMARK", buildPlatforms: ["ti.platform.omap4430.core0"]},
-    {name: 'messageq_bench', config: 'messageq_common', sources: ["messageq_socket.c", "ipcstartup.c"], copts: "-D BENCHMARK -D OMAPL138", buildPlatforms: ["ti.platforms.evmOMAPL138:DSP"]},
     {name: 'nano_test', config: 'messageq_common', sources: ["nano_test.c", "ipcstartup.c"], copts: "-D OMAPL138", buildPlatforms: ["ti.platforms.evmOMAPL138:DSP"]},
     {name: 'nano_test', config: 'messageq_common', sources: ["nano_test.c", "ipcstartup.c"], buildPlatforms: ["ti.platform.omap4430.core0"]},
 ];
@@ -71,4 +69,3 @@ var testArray = [
 arguments = ["profile=release platform=all"];
 
 testBld.buildTests(testArray, arguments);
-

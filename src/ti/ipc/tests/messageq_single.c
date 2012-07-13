@@ -30,12 +30,12 @@
  * EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 /*
- *  ======== messageq_socket.c ========
+ *  ======== messageq_single.c ========
  *
- *  Test for messageq over sockets.
+ *  Single threaded test of messageq over rpmsg.
  *
- *  Requires:
- *      tools/messageq_socket in rpmsg_3.2_rc4 branch of upstream-rpmsg.
+ *  See:
+ *      MessageQApp on Linux user space syslink3 repo.
  *
  */
 #include <xdc/std.h>
@@ -97,8 +97,8 @@ Void tsk1Fxn(UArg arg0, UArg arg1)
         remoteQueueId = MessageQ_getReplyQueue(msg);
         procId = MessageQ_getProcId(remoteQueueId);
 
-        System_printf("Received msg from (procId:remoteQueueId): 0x%x:0x%x"
-            "\tpayload: %d bytes; loops: %s printing \n",
+        System_printf("Received msg from (procId:remoteQueueId): 0x%x:0x%x\n"
+            "\tpayload: %d bytes; loops: %d %s printing.\n",
             procId, remoteQueueId,
             (MessageQ_getMsgSize(msg) - sizeof(MessageQ_MsgHeader)),
             numLoops, print ? "with" : "without");
@@ -112,7 +112,7 @@ Void tsk1Fxn(UArg arg0, UArg arg1)
 
             if (print) {
                 System_printf("Got msg #%d (%d bytes) from core %d\n",
-                    MessageQ_getMsgId(msg), msg->msgSize, procId);
+                    MessageQ_getMsgId(msg), MessageQ_getMsgSize(msg), procId);
             }
 
             Assert_isTrue(MessageQ_getMsgId(msg) == msgId, NULL);
@@ -126,8 +126,11 @@ Void tsk1Fxn(UArg arg0, UArg arg1)
         }
         end = Clock_getTicks();
 
-        System_printf("%d iterations took %d ticks or %d usecs/msg\n", numLoops,
+        if (!print) {
+            System_printf("%d iterations took %d ticks or %d usecs/msg\n", 
+                          numLoops,
             end - start, ((end - start) * Clock_tickPeriod) / numLoops);
+        }
     }
 }
 
