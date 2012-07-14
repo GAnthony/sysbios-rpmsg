@@ -56,8 +56,6 @@ typedef unsigned int u32;
 #endif
 #include <xdc/std.h>
 
-//#define VERBOSE 1
-
 #define NUM_SLAVE_MSGS_PER_HOST_MSG   4
 
 #define SLAVE_MESSAGEQNAME "SLAVE"
@@ -88,7 +86,6 @@ Void tsk1Fxn(UArg arg0, UArg arg1)
     MessageQ_Handle  messageQ;
     MessageQ_QueueId remoteQueueId;
     Int              status;
-    UInt16           msgId = 0;
     UInt             procId = MultiProc_getId("HOST");
     int              i;
 
@@ -114,17 +111,6 @@ Void tsk1Fxn(UArg arg0, UArg arg1)
         }
         remoteQueueId = MessageQ_getReplyQueue(inMsg);
 
-#ifdef VERBOSE
-        System_printf ("Received msgId: %d, inBuf: 0x%x\n",
-                        MessageQ_getMsgId(inMsg), inMsg->inBuf);
-#endif
-        /* test id of message received */
-        if (MessageQ_getMsgId(inMsg) != msgId) {
-            System_printf("Expected msgId: %d, got %d\n", 
-                           MessageQ_getMsgId(inMsg), msgId);
-            System_abort("Unexpected msgId received!\n");
-        }
-
         for (i = 0; i < NUM_SLAVE_MSGS_PER_HOST_MSG; i++) {
             /* Send back the data in 4 chunks: */
             MessageQ_setMsgId ((MessageQ_Msg)&outMsg, i);
@@ -132,17 +118,12 @@ Void tsk1Fxn(UArg arg0, UArg arg1)
             /* Return pointer to ith chunk of data: */
             outMsg.outBuf = inMsg->inBuf + i * OUTPUT_MSG_DATASIZE;
 
-#ifdef VERBOSE
-            System_printf("Sending msgId: %d, outBuf: 0x%x\n",
-                   i, outMsg.outBuf);
-#endif
             status = MessageQ_put(remoteQueueId, (MessageQ_Msg)&outMsg);
             if (status != MessageQ_S_SUCCESS) {
                System_abort("MessageQ_put had a failure/error\n");
             }
         }
         MessageQ_free ((MessageQ_Msg)inMsg);
-        msgId++;
     }
 }
 
