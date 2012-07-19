@@ -34,7 +34,7 @@
  *
  */
 
-var commonBld = xdc.loadCapsule("ti/sdo/ipc/build/common.bld");
+var commonBld = xdc.loadCapsule("ti/build/common.bld");
 
 var objList_m3 = [
       "TransportVirtioSetup",
@@ -58,13 +58,9 @@ var trgFilter_674 = {
 
 /* generate makefiles */
 arguments = ["profile=debug platform=all"];
-Pkg.attrs.copts= '-D OMAP4430';
-commonBld.buildLibs(objList_m3, undefined, trgFilter_m3, arguments);
-Pkg.attrs.copts= '-D OMAPL138';
-commonBld.buildLibs(objList_674, undefined, trgFilter_674, arguments);
+commonBld.buildLibs(objList_m3, undefined, trgFilter_m3, arguments, "-D OMAP4430");
+commonBld.buildLibs(objList_674, undefined, trgFilter_674, arguments, "-D OMAPL138");
 
 arguments = ["profile=release platform=all"];
-Pkg.attrs.copts= '-D OMAP4430';
-commonBld.buildLibs(objList_m3, undefined, trgFilter_m3, arguments);
-Pkg.attrs.copts= '-D OMAPL138';
-commonBld.buildLibs(objList_674, undefined, trgFilter_674, arguments);
+commonBld.buildLibs(objList_m3, undefined, trgFilter_m3, arguments, "-D OMAP4430");
+commonBld.buildLibs(objList_674, undefined, trgFilter_674, arguments, "-D OMAPL138");

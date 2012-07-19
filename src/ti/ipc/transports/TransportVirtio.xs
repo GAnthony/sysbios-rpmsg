@@ -54,9 +54,12 @@ function module$use()
         VirtQueue       = xdc.useModule("ti.ipc.family.omapl138.VirtQueue");
         xdc.loadPackage("ti.ipc.family.omapl138");
     }
-    else {
+    else if (Program.platformName.match(/omap4430/)) {
         VirtQueue       = xdc.useModule("ti.ipc.family.omap4430.VirtQueue");
         xdc.loadPackage("ti.ipc.family.omap4430");
+    }
+    else {
+        print("TransportVirtio.xs: Did not match any platform!\n");
     }
 }
 /*

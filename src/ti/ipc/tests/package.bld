@@ -34,8 +34,8 @@
  *
  */
 
-var testBld = xdc.loadCapsule("ti/sdo/ipc/build/test.bld");
-var commonBld = xdc.loadCapsule("ti/sdo/ipc/build/common.bld");
+var testBld = xdc.loadCapsule("ti/build/test.bld");
+var commonBld = xdc.loadCapsule("ti/build/common.bld");
 
 /*
  *  Export everything necessary to build this package with (almost) no

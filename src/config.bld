@@ -109,5 +109,5 @@ C674.platform = C674.platforms[0];
 Build.targets = [
                     //C64T,
                     C674,
-                    //M3,
+                    M3,
                 ];

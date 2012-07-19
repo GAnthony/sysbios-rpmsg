@@ -34,7 +34,7 @@
  *
  */
 
-var commonBld = xdc.loadCapsule("ti/sdo/ipc/build/common.bld");
+var commonBld = xdc.loadCapsule("ti/build/common.bld");
 
 var objList_m3 = [
       "InterruptM3",
