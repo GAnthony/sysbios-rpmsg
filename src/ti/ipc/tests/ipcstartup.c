@@ -40,7 +40,7 @@ static Void ipcStartupTask(UArg arg0, UArg arg1)
      * MessageQCopy, as this clashes with MessageQ.
      */
     nameService_register("rpmsg-proto", RPMSG_MESSAGEQ_PORT, RPMSG_NS_CREATE);
-};
+}
 
 /*
  *  ======== ipcStartup ========
