@@ -35,12 +35,12 @@
  *  Include this table in each base image, which is read from remoteproc on
  *  host side.
  *
- *  These values are currently very OMAPL138 specific!
- *
  */
 
 #ifndef _RSC_TABLE_OMAPL138_H_
 #define _RSC_TABLE_OMAPL138_H_
+
+#include <ti/resources/rsc_types.h>
 
 #define DATA_DA                 0xc4000000
 
@@ -61,93 +61,20 @@
  * sizes of the virtqueues (expressed in number of buffers supported,
  * and must be power of 2)
  */
-#define RPMSG_VQ0_SIZE                256
-#define RPMSG_VQ1_SIZE                256
+#define RPMSG_VQ0_SIZE          256
+#define RPMSG_VQ1_SIZE          256
 
-#define CONSOLE_VQ0_SIZE                256
-#define CONSOLE_VQ1_SIZE                256
-
-/* Size constants must match those used on host: include/asm-generic/sizes.h */
-#define SZ_1M                           0x00100000
-#define SZ_2M                           0x00200000
-#define SZ_4M                           0x00400000
-#define SZ_8M                           0x00800000
-#define SZ_16M                          0x01000000
-#define SZ_32M                          0x02000000
-#define SZ_64M                          0x04000000
-#define SZ_128M                         0x08000000
-#define SZ_256M                         0x10000000
-#define SZ_512M                         0x20000000
-
-/* virtio ids: keep in sync with the linux "include/linux/virtio_ids.h" */
-#define VIRTIO_ID_CONSOLE	3 /* virtio console */
-#define VIRTIO_ID_RPMSG		7 /* virtio remote processor messaging */
-
-/* Indices of rpmsg virtio features we support */
-#define VIRTIO_RPMSG_F_NS	0 /* RP supports name service notifications */
+#define CONSOLE_VQ0_SIZE        256
+#define CONSOLE_VQ1_SIZE        256
 
 /* flip up bits whose indices represent features we support */
 #define RPMSG_IPU_C0_FEATURES         1
 
-/* Resource info: Must match include/linux/remoteproc.h: */
-#define TYPE_CARVEOUT    0
-#define TYPE_DEVMEM      1
-#define TYPE_TRACE       2
-#define TYPE_VDEV  3
-
-struct fw_rsc_carveout {
-	u32 type;
-	u32 da;
-	u32 pa;
-	u32 len;
-	u32 flags;
-	u32 reserved;
-	char name[32];
-};
-
-struct fw_rsc_devmem {
-	u32 type;
-	u32 da;
-	u32 pa;
-	u32 len;
-	u32 flags;
-	u32 reserved;
-	char name[32];
-};
-
-struct fw_rsc_trace {
-	u32 type;
-	u32 da;
-	u32 len;
-	u32 reserved;
-	char name[32];
-};
-
-struct fw_rsc_vdev_vring {
-	u32 da; /* device address */
-	u32 align;
-	u32 num;
-	u32 notifyid;
-	u32 reserved;
-};
-
-struct fw_rsc_vdev {
-	u32 type;
-	u32 id;
-	u32 notifyid;
-	u32 dfeatures;
-	u32 gfeatures;
-	u32 config_len;
-	char status;
-	char num_of_vrings;
-	char reserved[2];
-};
-
 struct resource_table {
-	u32 version;
-	u32 num;
-	u32 reserved[2];
-	u32 offset[13];
+	UInt32 version;
+	UInt32 num;
+	UInt32 reserved[2];
+	UInt32 offset[13];
 
 	/* rpmsg vdev entry */
 	struct fw_rsc_vdev rpmsg_vdev;
@@ -161,13 +88,12 @@ struct resource_table {
 	struct fw_rsc_trace trace;
 };
 
-extern char * xdc_runtime_SysMin_Module_State_0_outbuf__A;
-#define TRACEBUFADDR (u32)&xdc_runtime_SysMin_Module_State_0_outbuf__A
+#define TRACEBUFADDR (UInt32)&xdc_runtime_SysMin_Module_State_0_outbuf__A
 
-#pragma DATA_SECTION(resources, ".resource_table")
-#pragma DATA_ALIGN(resources, 4096)
+#pragma DATA_SECTION(ti_resources_ResourceTable, ".resource_table")
+#pragma DATA_ALIGN(ti_resources_ResourceTable, 4096)
 
-struct resource_table resources = {
+struct resource_table ti_resources_ResourceTable = {
 	1, /* we're the first version that implements this */
 	3, /* number of entries in the table */
 	0, 0, /* reserved, must be zero */

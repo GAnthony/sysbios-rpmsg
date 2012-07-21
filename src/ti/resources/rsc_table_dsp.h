@@ -93,9 +93,9 @@
  */
 /* This address is derived from current IPU & ION carveouts */
 #ifdef OMAP5
-#define PHYS_MEM_IPC_VRING      0xA4800000
+#define PHYS_MEM_IPC_VRING      0x95000000
 #else
-#define PHYS_MEM_IPC_VRING      0xA8800000
+#define PHYS_MEM_IPC_VRING      0x99000000
 #endif
 
 /* Need to be identical to that of Ducati */
@@ -162,7 +162,7 @@ struct resource_table {
     struct fw_rsc_devmem devmem7;
 };
 
-#define TRACEBUFADDR (UInt32)&ti_trace_SysMin_Module_State_0_outbuf__A
+#define TRACEBUFADDR (UInt32)&xdc_runtime_SysMin_Module_State_0_outbuf__A
 
 #pragma DATA_SECTION(ti_resources_ResourceTable, ".resource_table")
 #pragma DATA_ALIGN(ti_resources_ResourceTable, 4096)
