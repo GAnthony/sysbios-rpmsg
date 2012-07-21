@@ -48,13 +48,6 @@
 
 #include <ti/ipc/MessageQ.h>
 
-typedef unsigned int u32;
-#ifdef OMAPL138
-#include <ti/resources/rsc_table_omapl138.h>
-#else
-#include <ti/resources/rsc_table.h>
-#endif
-
 #define SLAVE_MESSAGEQNAME "SLAVE"
 
 #define MessageQ_payload(m) ((void *)((char *)(m) + sizeof(MessageQ_MsgHeader)))
@@ -139,8 +132,7 @@ Void tsk1Fxn(UArg arg0, UArg arg1)
  */
 Int main(Int argc, Char* argv[])
 {
-    System_printf("main: MultiProc id = %d (%s)\n", MultiProc_self(), __TIME__);
-    System_printf("%d resources at 0x%x\n", resources.num, resources);
+    System_printf("%s:main: MultiProc id = %d\n", __FILE__, MultiProc_self());
 
     Task_create(tsk1Fxn, NULL, NULL);
 

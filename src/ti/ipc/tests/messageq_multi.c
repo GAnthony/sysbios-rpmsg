@@ -48,13 +48,6 @@
 #include <ti/ipc/MessageQ.h>
 #include <ti/ipc/MultiProc.h>
 
-typedef unsigned int u32;
-#ifdef OMAPL138
-#include <ti/resources/rsc_table_omapl138.h>
-#else
-#include <ti/resources/rsc_table.h>
-#endif
-
 #define SLAVE_MESSAGEQNAME "SLAVE"
 #define HOST_MESSAGEQNAME "HOST"
 #define NUMTHREADS 10
@@ -138,8 +131,7 @@ Int main(Int argc, Char* argv[])
     Task_Params params;
     Int i;
 
-    System_printf("main: MultiProc id = %d\n", MultiProc_self());
-    System_printf("%d resources at 0x%x\n", resources.num, resources);
+    System_printf("%s:main: MultiProc id = %d\n", __FILE__, MultiProc_self());
 
     /* Create N threads to correspond with host side N thread test app: */
     Task_Params_init(&params);
