@@ -141,10 +141,6 @@ enum {
 
 static VirtQueue_Object *queueRegistry[NUM_QUEUES] = {NULL};
 
-static Bool hostReadyToRecv = FALSE;
-
-static Bool checkPrimedBuffers(VirtQueue_Object * vq);
-
 static inline Void * mapPAtoVA(UInt pa)
 {
     return (Void *)((pa & 0x000fffffU) | 0xa0000000U);
@@ -177,6 +173,15 @@ Void VirtQueue_startup(UInt16 remoteProcId, Bool isHost)
        isr_fxn = (Fxn) VirtQueue_slaveIsr;
     }
 
+    /*
+     * Wait for first kick from host, which happens to coincide with the
+     * priming of host's receive buffers, indicating host is ready to send.
+     * Since interrupt is cleared, we throw away this first kick, which is
+     * OK since we don't process this in the ISR anyway.
+     */
+    while (InterruptM3_intClear(remoteProcId, NULL) ==
+           InterruptM3_INVALIDPAYLOAD);
+
     /* Plug ISR.*/
     InterruptM3_intRegister(remoteProcId, &intInfo, isr_fxn, NULL);
 
@@ -188,10 +193,6 @@ Void VirtQueue_startup(UInt16 remoteProcId, Bool isHost)
        /* Wait until host and slaves have synced: */
        VirtQueue_module->hostSlaveSynced = 0;
        while (!VirtQueue_module->hostSlaveSynced);
-    }
-    else {
-       /* Wait until host has indicated it's ready to receive: */
-       while (!hostReadyToRecv);
     }
 
     Log_print0(Diags_USER1, "Passed VirtQueue_startup\n");
@@ -572,11 +573,6 @@ Void VirtQueue_slaveIsr(UArg msg)
         vq = queueRegistry[msg];
         if (vq) {
             vq->callback(vq);
-
-            /* Check to see if host just sent it's first interrupt: */
-            if (!hostReadyToRecv) {
-               hostReadyToRecv = checkPrimedBuffers(vq);
-            }
         }
         else {
             Log_print0(Diags_USER1, "msg recvd before callback registered!\n");
@@ -617,12 +613,4 @@ Void VirtQueue_cacheWb()
 
     /* Flush the cache */
     Cache_wbAll();
-}
-
-static Bool checkPrimedBuffers(VirtQueue_Object * vq)
-{
-    struct vring *vring = vq->vringPtr;
-
-    Log_print1(Diags_USER1, "avail->idx: %d\n", vring->avail->idx);
-    return (vring->avail->idx == VirtQueue_RP_MSG_NUM_BUFS);
 }

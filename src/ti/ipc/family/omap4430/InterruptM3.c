@@ -85,8 +85,6 @@
 #define INTERRUPT_CORE_0       (0x40001000)
 #define INTERRUPT_CORE_1       (0x40001000 + 2)
 
-#define InterruptM3_INVALIDPAYLOAD       (0xFFFFFFFF)
-
 /*
  *************************************************************************
  *                      Module functions

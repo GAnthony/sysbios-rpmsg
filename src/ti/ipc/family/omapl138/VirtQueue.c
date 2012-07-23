@@ -433,8 +433,14 @@ Void VirtQueue_startup(UInt16 remoteProcId, Bool isHost)
     hostProcId      = MultiProc_getId("HOST");
     dspProcId       = MultiProc_getId("DSP");
 
-    while (InterruptDsp_intClear(remoteProcId, NULL) == InterruptDsp_INVALIDPAYLOAD)
-        ;
+    /*
+     * Wait for first kick from host, which happens to coincide with the
+     * priming of host's receive buffers, indicating host is ready to send.
+     * Since interrupt is cleared, we throw away this first kick, which is
+     * OK since we don't process this in the ISR anyway.
+     */
+    while (InterruptDsp_intClear(remoteProcId, NULL) ==
+           InterruptDsp_INVALIDPAYLOAD);
 
     /*
      *  DSP can be used to prototype communications with CORE0 instead of

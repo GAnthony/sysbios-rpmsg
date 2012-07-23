@@ -44,6 +44,8 @@ import ti.sdo.utils.MultiProc;
 module InterruptM3 inherits ti.sdo.ipc.notifyDrivers.IInterrupt
 {
 
+    const UInt INVALIDPAYLOAD = 0xFFFFFFFF;
+
 internal:
 
     /*! Function table */
