@@ -172,15 +172,14 @@ static Void *getTxBuf(TransportVirtio_Object *obj, VirtQueue_Handle vq)
 
 /*  --------------  TEMP NameService over VirtQueue ----------------------- */
 
-void nameService_register(char * name, UInt32 port,
-                                 enum Rpmsg_nsFlags flags)
+/* -------------- TEMP NameService over rpmsg ----------------------- */
+static void nameService_register(UInt16 dstProc, char * name, UInt32 port, enum Rpmsg_nsFlags flags)
 {
     struct Rpmsg_NsMsg nsMsg;
-    UInt16 len      = sizeof(nsMsg);
-    UInt16 dstProc  = MultiProc_getId("HOST");
+    UInt16 len = sizeof(nsMsg);
     UInt32 dstEndpt = RPMSG_NAMESERVICE_PORT;
     UInt32 srcEndpt = port;
-    Ptr    data     = &nsMsg;
+    Ptr data = &nsMsg;
 
     strncpy(nsMsg.name, name, RPMSG_NAME_SIZE);
 
@@ -308,10 +307,6 @@ Int TransportVirtio_Instance_init(TransportVirtio_Object *obj,
     vq_host = obj->vq_host = (Ptr)VirtQueue_create(remoteProcId, &vqParams, eb);
     obj->vq_slave  = (Ptr)VirtQueue_create(remoteProcId, &vqParams, eb);
 
-    /* Register the transport with MessageQ */
-    flag = ti_sdo_ipc_MessageQ_registerTransport(
-        TransportVirtio_Handle_upCast(obj), remoteProcId, params->priority);
-
     if (obj->isHost)  {
        /* Initialize fields used by getTxBuf(): */
             obj->sbufs = (Char *)buf_addr + VirtQueue_RP_MSG_NUM_BUFS * VirtQueue_RP_MSG_BUF_SIZE;
@@ -325,10 +320,16 @@ Int TransportVirtio_Instance_init(TransportVirtio_Object *obj,
        VirtQueue_kick(obj->vq_host);
     }
 
-    /*
-     * Plug Vring Interrupts...
-     */
-    VirtQueue_startup(obj->remoteProcId, obj->isHost);
+    /* Plug Vring Interrupts, and wait for host read to recv kick: */
+    VirtQueue_startup(remoteProcId, obj->isHost);
+
+    /* Announce our "MessageQ" service to other side: */
+    nameService_register(remoteProcId, RPMSG_SOCKET_NAME, RPMSG_MESSAGEQ_PORT,
+                         RPMSG_NS_CREATE);
+
+    /* Register the transport with MessageQ */
+    flag = ti_sdo_ipc_MessageQ_registerTransport(
+        TransportVirtio_Handle_upCast(obj), remoteProcId, params->priority);
 
     if (flag == FALSE) {
         return (2);
@@ -347,6 +348,11 @@ Void TransportVirtio_Instance_finalize(TransportVirtio_Object *obj, Int status)
     Swi_Handle  swiHandle;
 
     Log_print0(Diags_ENTRY, "--> "FXNN);
+
+
+    /* Announce our "MessageQ" service is going away: */
+    nameService_register(obj->remoteProcId, RPMSG_SOCKET_NAME,
+                         RPMSG_MESSAGEQ_PORT, RPMSG_NS_DESTROY);
 
     /* Destruct the swi */
     swiHandle = TransportVirtio_Instance_State_swiObj(obj);

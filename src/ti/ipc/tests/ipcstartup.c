@@ -13,7 +13,6 @@
 #include <ti/ipc/MultiProc.h>
 #include <ti/ipc/transports/TransportVirtioSetup.h>
 #include <ti/ipc/rpmsg/Rpmsg.h>
-#include <ti/ipc/transports/_TransportVirtio.h>
 
 /*
  *  ======== ipcStartupTask ========
@@ -23,23 +22,13 @@ static Void ipcStartupTask(UArg arg0, UArg arg1)
     UInt procId = MultiProc_getId("HOST");
     Int status;
 
-    /* call TransportVirtioSetup to attach to remote processor */
+    /* TransportVirtioSetup will busy wait until host kicks ready to recv: */
     status = TransportVirtioSetup_attach(procId, 0);
     Assert_isTrue(status >= 0, NULL);
 
-    /* call NameServer_attach to remote processor */
+    /* Sets up to comminicate with host's NameServer: */
     status = ti_sdo_utils_NameServer_SetupProxy_attach(procId, 0);
     Assert_isTrue(status >= 0, NULL);
-
-    /*
-     * Tell the Linux host we have a MessageQ service over rpmsg.
-     *
-     * TBD: This should be in the VirtioTransport initialization, but we need
-     * an interrupt handshake after BIOS_start().
-     * TBD: Also, NameMap should go over a bare rpmsg API, rather than
-     * MessageQCopy, as this clashes with MessageQ.
-     */
-    nameService_register("rpmsg-proto", RPMSG_MESSAGEQ_PORT, RPMSG_NS_CREATE);
 }
 
 /*
