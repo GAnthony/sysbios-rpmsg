@@ -1,5 +1,5 @@
-/*
- * Copyright (c) 2012, Texas Instruments Incorporated
+/* 
+ * Copyright (c) 2011, Texas Instruments Incorporated
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -28,44 +28,16 @@
  * WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR
  * OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE,
  * EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
- */
+ * */
 /*
- *  ======== package.bld ========
+ *  ======== package.xdc ========
  *
  */
-
-var testBld = xdc.loadCapsule("ti/build/test.bld");
-var commonBld = xdc.loadCapsule("ti/build/common.bld");
-
-/*
- *  Export everything necessary to build this package with (almost) no
- *  generated files.  This also exports subdirectories like 'golden'
- *  and 'docs'.
- */
-Pkg.attrs.exportAll = true;
-
-/*
- *  ======== testArray ========
- *  See ti/bios/build/test.bld. Only the test name is required.
+ 
+/*!
+ *  ======== ti.ipc.ipcmgr ========
+ *  Home for ipc startup (and later config/other fxns) for rpmsg based IPC.
  *
- *  Example:
- *    var testArray = [
- *        {name: Test1},
- *        {name: Test2, sources: ["Test"], config: "Test", refOutput: "Test", timeout: "15", buildTargets: ["C64", "C28_large"]}
- *    ];
  */
-
-var testArray = [
-    {name: 'messageq_multi', config: 'messageq_common', copts: "-D BENCHMARK", buildPlatforms: ["ti.platform.omap4430.core0"]},
-    {name: 'messageq_multi', config: 'messageq_common', copts: "-D BENCHMARK -D OMAPL138", buildPlatforms: ["ti.platforms.evmOMAPL138:DSP"]},
-
-    {name: 'messageq_single', config: 'messageq_common', buildPlatforms: ["ti.platform.omap4430.core0"]},
-    {name: 'messageq_single', config: 'messageq_common', copts: "-D OMAPL138", buildPlatforms: ["ti.platforms.evmOMAPL138:DSP"]},
-
-    {name: 'nano_test', config: 'messageq_common', copts: "-D OMAPL138", buildPlatforms: ["ti.platforms.evmOMAPL138:DSP"]},
-    {name: 'nano_test', config: 'messageq_common', buildPlatforms: ["ti.platform.omap4430.core0"]},
-];
-
-arguments = ["profile=release platform=all"];
-
-testBld.buildTests(testArray, arguments);
+package ti.ipc.ipcmgr [1,0,0,0] {
+}

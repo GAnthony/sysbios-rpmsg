@@ -1,4 +1,4 @@
-/*
+/* 
  * Copyright (c) 2012, Texas Instruments Incorporated
  * All rights reserved.
  *
@@ -28,44 +28,39 @@
  * WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR
  * OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE,
  * EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
- */
+ * */
 /*
- *  ======== package.bld ========
+ *  ======== package.xs ========
  *
  */
 
-var testBld = xdc.loadCapsule("ti/build/test.bld");
-var commonBld = xdc.loadCapsule("ti/build/common.bld");
-
 /*
- *  Export everything necessary to build this package with (almost) no
- *  generated files.  This also exports subdirectories like 'golden'
- *  and 'docs'.
+ *  ======== getLibs ========
  */
-Pkg.attrs.exportAll = true;
+function getLibs(prog)
+{
+    var suffix = prog.build.target.findSuffix(this);
 
-/*
- *  ======== testArray ========
- *  See ti/bios/build/test.bld. Only the test name is required.
- *
- *  Example:
- *    var testArray = [
- *        {name: Test1},
- *        {name: Test2, sources: ["Test"], config: "Test", refOutput: "Test", timeout: "15", buildTargets: ["C64", "C28_large"]}
- *    ];
- */
+    var ompProfile = "debug";
 
-var testArray = [
-    {name: 'messageq_multi', config: 'messageq_common', copts: "-D BENCHMARK", buildPlatforms: ["ti.platform.omap4430.core0"]},
-    {name: 'messageq_multi', config: 'messageq_common', copts: "-D BENCHMARK -D OMAPL138", buildPlatforms: ["ti.platforms.evmOMAPL138:DSP"]},
+    if (suffix == null) {
+        /* no matching lib found in this package, return "" */
+        $trace("Unable to locate a compatible library, returning none.",
+                1, ['getLibs']);
+        return ("");
+    }
 
-    {name: 'messageq_single', config: 'messageq_common', buildPlatforms: ["ti.platform.omap4430.core0"]},
-    {name: 'messageq_single', config: 'messageq_common', copts: "-D OMAPL138", buildPlatforms: ["ti.platforms.evmOMAPL138:DSP"]},
+    /* the location of the libraries are in lib/<profile>/* */
+    var lib = "lib/" + ompProfile + "/ti.ipc.ipcmgr.a" + suffix;
 
-    {name: 'nano_test', config: 'messageq_common', copts: "-D OMAPL138", buildPlatforms: ["ti.platforms.evmOMAPL138:DSP"]},
-    {name: 'nano_test', config: 'messageq_common', buildPlatforms: ["ti.platform.omap4430.core0"]},
-];
 
-arguments = ["profile=release platform=all"];
+    /*
+     * If the requested profile doesn't exist, we return the 'release' library.
+     */
+    if (!java.io.File(this.packageBase + lib).exists()) {
+        print("cant find " + this.packageBase + lib);
+        $trace("Unable to locate lib for requested '" + this.profile);
+    }
 
-testBld.buildTests(testArray, arguments);
+    return (lib);
+}

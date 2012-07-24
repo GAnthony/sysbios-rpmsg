@@ -30,42 +30,29 @@
  * EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 /*
- *  ======== package.bld ========
- *
+ *  ======== IpcMgr.c ========
  */
 
-var testBld = xdc.loadCapsule("ti/build/test.bld");
-var commonBld = xdc.loadCapsule("ti/build/common.bld");
+#include <xdc/std.h>
+#include <xdc/runtime/Assert.h>
+
+#include <ti/ipc/MultiProc.h>
+#include <ti/ipc/namesrv/NameServerRemoteRpmsg.h>
+#include <ti/ipc/transports/TransportVirtioSetup.h>
 
 /*
- *  Export everything necessary to build this package with (almost) no
- *  generated files.  This also exports subdirectories like 'golden'
- *  and 'docs'.
+ *  ======== IpcMgr_ipcStartup ========
  */
-Pkg.attrs.exportAll = true;
+Void IpcMgr_ipcStartup()
+{
+    UInt procId = MultiProc_getId("HOST");
+    Int status;
 
-/*
- *  ======== testArray ========
- *  See ti/bios/build/test.bld. Only the test name is required.
- *
- *  Example:
- *    var testArray = [
- *        {name: Test1},
- *        {name: Test2, sources: ["Test"], config: "Test", refOutput: "Test", timeout: "15", buildTargets: ["C64", "C28_large"]}
- *    ];
- */
+    /* TransportVirtioSetup will busy wait until host kicks ready to recv: */
+    status = TransportVirtioSetup_attach(procId, 0);
+    Assert_isTrue(status >= 0, NULL);
 
-var testArray = [
-    {name: 'messageq_multi', config: 'messageq_common', copts: "-D BENCHMARK", buildPlatforms: ["ti.platform.omap4430.core0"]},
-    {name: 'messageq_multi', config: 'messageq_common', copts: "-D BENCHMARK -D OMAPL138", buildPlatforms: ["ti.platforms.evmOMAPL138:DSP"]},
-
-    {name: 'messageq_single', config: 'messageq_common', buildPlatforms: ["ti.platform.omap4430.core0"]},
-    {name: 'messageq_single', config: 'messageq_common', copts: "-D OMAPL138", buildPlatforms: ["ti.platforms.evmOMAPL138:DSP"]},
-
-    {name: 'nano_test', config: 'messageq_common', copts: "-D OMAPL138", buildPlatforms: ["ti.platforms.evmOMAPL138:DSP"]},
-    {name: 'nano_test', config: 'messageq_common', buildPlatforms: ["ti.platform.omap4430.core0"]},
-];
-
-arguments = ["profile=release platform=all"];
-
-testBld.buildTests(testArray, arguments);
+    /* Sets up to comminicate with host's NameServer: */
+    status = NameServerRemoteRpmsg_attach(procId, 0);
+    Assert_isTrue(status >= 0, NULL);
+}

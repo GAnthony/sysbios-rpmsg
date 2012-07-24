@@ -31,22 +31,13 @@
  */
 /*
  *  ======== package.bld ========
- *
  */
 
 var testBld = xdc.loadCapsule("ti/build/test.bld");
 var commonBld = xdc.loadCapsule("ti/build/common.bld");
 
 /*
- *  Export everything necessary to build this package with (almost) no
- *  generated files.  This also exports subdirectories like 'golden'
- *  and 'docs'.
- */
-Pkg.attrs.exportAll = true;
-
-/*
  *  ======== testArray ========
- *  See ti/bios/build/test.bld. Only the test name is required.
  *
  *  Example:
  *    var testArray = [
@@ -55,17 +46,45 @@ Pkg.attrs.exportAll = true;
  *    ];
  */
 
-var testArray = [
-    {name: 'messageq_multi', config: 'messageq_common', copts: "-D BENCHMARK", buildPlatforms: ["ti.platform.omap4430.core0"]},
-    {name: 'messageq_multi', config: 'messageq_common', copts: "-D BENCHMARK -D OMAPL138", buildPlatforms: ["ti.platforms.evmOMAPL138:DSP"]},
-
-    {name: 'messageq_single', config: 'messageq_common', buildPlatforms: ["ti.platform.omap4430.core0"]},
-    {name: 'messageq_single', config: 'messageq_common', copts: "-D OMAPL138", buildPlatforms: ["ti.platforms.evmOMAPL138:DSP"]},
-
-    {name: 'nano_test', config: 'messageq_common', copts: "-D OMAPL138", buildPlatforms: ["ti.platforms.evmOMAPL138:DSP"]},
-    {name: 'nano_test', config: 'messageq_common', buildPlatforms: ["ti.platform.omap4430.core0"]},
+var objList_64T = [
+      "IpcMgr",
 ];
 
-arguments = ["profile=release platform=all"];
+var trgFilter_64T = {
+        field: "isa",
+        list: [ "64T" ]
+};
 
-testBld.buildTests(testArray, arguments);
+var objList_m3 = [
+      "IpcMgr",
+];
+
+var trgFilter_m3 = {
+        field: "isa",
+        list: [ "v7M" ]
+};
+
+var objList_674 = [
+      "IpcMgr",
+];
+
+var trgFilter_674 = {
+        field: "isa",
+        list: [ "674" ]
+};
+
+/* generate makefiles */
+arguments = ["profile=debug platform=all"];
+commonBld.buildLibs(objList_64T, undefined, trgFilter_64T, arguments);
+commonBld.buildLibs(objList_m3, undefined, trgFilter_m3, arguments);
+commonBld.buildLibs(objList_674, undefined, trgFilter_674, arguments);
+
+arguments = ["profile=release platform=all"];
+commonBld.buildLibs(objList_64T, undefined, trgFilter_64T, arguments);
+commonBld.buildLibs(objList_m3, undefined, trgFilter_m3, arguments);
+commonBld.buildLibs(objList_674, undefined, trgFilter_674, arguments);
+
+Pkg.attrs.exportSrc = false;
+Pkg.otherFiles = [
+    "package.bld"
+];
