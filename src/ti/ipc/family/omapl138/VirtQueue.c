@@ -150,9 +150,6 @@ enum {
 
 static VirtQueue_Object *queueRegistry[NUM_QUEUES] = {NULL};
 
-static UInt16 hostProcId;
-static UInt16 dspProcId;
-
 static inline Void * mapPAtoVA(UInt pa)
 {
     return (Void *)((pa & 0x000fffffU) | 0xc3000000U);
@@ -319,13 +316,13 @@ Void VirtQueue_isr(UArg msg)
 
     Log_print1(Diags_USER1, "VirtQueue_isr received msg = 0x%x\n", msg);
 
-    if (MultiProc_self() == dspProcId) {
+    if (MultiProc_self() == VirtQueue_dspProcId) {
         switch(msg) {
             case (UInt)RP_MSG_MBOX_READY:
                 return;
 
             case (UInt)RP_MBOX_ECHO_REQUEST:
-                InterruptDsp_intSend(hostProcId, NULL,
+                InterruptDsp_intSend(VirtQueue_hostProcId, NULL,
                                      (UInt)(RP_MBOX_ECHO_REPLY));
                 return;
 
@@ -433,9 +430,6 @@ Void VirtQueue_startup(UInt16 remoteProcId, Bool isHost)
 {
     IInterrupt_IntInfo intInfo;
 
-    hostProcId      = MultiProc_getId("HOST");
-    dspProcId       = MultiProc_getId("DSP");
-
     /*
      * Wait for first kick from host, which happens to coincide with the
      * priming of host's receive buffers, indicating host is ready to send.
@@ -449,7 +443,7 @@ Void VirtQueue_startup(UInt16 remoteProcId, Bool isHost)
      *  DSP can be used to prototype communications with CORE0 instead of
      *  HOST
      */
-    if (MultiProc_self() == dspProcId) {
+    if (MultiProc_self() == VirtQueue_dspProcId) {
         InterruptDsp_intRegister(remoteProcId, &intInfo, (Fxn)VirtQueue_isr, NULL);
     }
     Log_print0(Diags_USER1, "Passed VirtQueue_startup\n");
