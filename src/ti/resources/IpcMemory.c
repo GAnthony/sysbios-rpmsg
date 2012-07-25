@@ -43,6 +43,30 @@
 
 
 /*
+ *  ======== IpcMemory_getTraceBufPtr ========
+ */
+Ptr IpcMemory_getTraceBufPtr()
+{
+    UInt32 i;
+    UInt32 offset;
+    UInt32 type;
+    struct fw_rsc_trace *entry = NULL;
+    IpcMemory_RscTable *table = (IpcMemory_RscTable *)
+                                            (IpcMemory_module->pTable);
+
+    for (i = 0; i < module->pTable->num; i++) {
+        offset = (UInt32)((Char *)table + table->offset[i]);
+        type = *(UInt32 *)offset;
+        if (type == TYPE_TRACE) {
+            entry = (struct fw_rsc_trace *)offset;
+            return ((Ptr)entry->da);
+        }
+    }
+
+    return (NULL);
+}
+
+/*
  *  ======== IpcMemory_getEntry ========
  */
 IpcMemory_MemEntry *IpcMemory_getEntry(UInt index)

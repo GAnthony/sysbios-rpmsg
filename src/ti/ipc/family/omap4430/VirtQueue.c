@@ -61,7 +61,8 @@
 #include <xdc/runtime/Diags.h>
 #include <xdc/runtime/Assert.h>
 #include <xdc/runtime/Startup.h>
- 
+#include <xdc/runtime/SysMin.h>
+
 #include <ti/sysbios/hal/Hwi.h>
 #include <ti/sysbios/knl/Clock.h>
 #include <ti/sysbios/knl/Swi.h>
@@ -70,6 +71,8 @@
 
 #include <ti/sdo/ipc/notifyDrivers/IInterrupt.h>
 #include <ti/ipc/family/omap4430/InterruptM3.h>
+#include <ti/resources/IpcMemory.h>
+
 #include <ti/pm/IpcPower.h>
 
 #include <ti/ipc/MultiProc.h>
@@ -95,6 +98,7 @@
 
 /* The total IPC space needed to communicate with a remote processor */
 #define RPMSG_IPC_MEM   (RP_MSG_BUFS_SPACE + 2 * RP_MSG_RING_SIZE)
+
 
 #define ID_SYSM3_TO_A9      0
 #define ID_A9_TO_SYSM3      1
@@ -206,6 +210,8 @@ Void VirtQueue_Instance_init(VirtQueue_Object *vq, UInt16 remoteProcId,
 {
     void *vring_phys;
     Error_Block eb;
+
+    VirtQueue_module->traceBufPtr = IpcMemory_getTraceBufPtr();
 
     Error_init(&eb);
 
@@ -611,6 +617,8 @@ Void VirtQueue_cacheWb()
 
     oldticks = newticks;
 
-    /* Flush the cache */
-    Cache_wbAll();
+    /* Flush the cache of the SysMin buffer only: */
+    Assert_isTrue((VirtQueue_module->traceBufPtr != NULL), NULL);
+    Cache_wb(VirtQueue_module->traceBufPtr, SysMin_bufSize, Cache_Type_ALL,
+             FALSE);
 }

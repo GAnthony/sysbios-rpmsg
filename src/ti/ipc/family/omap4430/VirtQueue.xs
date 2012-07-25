@@ -42,6 +42,7 @@ var VirtQueue = null;
 function module$use()
 {
 
+    IpcMemory   = xdc.useModule("ti.resources.IpcMemory");
     MultiProc   = xdc.useModule("ti.sdo.utils.MultiProc");
 
     Swi = xdc.useModule("ti.sysbios.knl.Swi");
@@ -63,5 +64,5 @@ function module$static$init(mod, params)
   mod.hostSlaveSynced = 0;
   mod.virtQueueInitialized = 0;
   mod.queueRegistry = null;
+  mod.traceBufPtr = null;
 }
-

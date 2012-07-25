@@ -113,6 +113,9 @@ module IpcMemory {
     @DirectCall
     Int physToVirt(UInt32 pa, UInt32 *da);
 
+    @DirectCall
+    Ptr getTraceBufPtr();
+
 internal:   /* not for client use */
 
     /*!

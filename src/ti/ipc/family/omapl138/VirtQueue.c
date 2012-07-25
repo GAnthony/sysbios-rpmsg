@@ -61,6 +61,7 @@
 #include <xdc/runtime/Log.h>
 #include <xdc/runtime/Diags.h>
 #include <xdc/runtime/Startup.h>
+#include <xdc/runtime/SysMin.h>
 
 #include <ti/sysbios/hal/Hwi.h>
 #include <ti/sysbios/knl/Semaphore.h>
@@ -71,7 +72,7 @@
 
 #include <ti/sdo/ipc/notifyDrivers/IInterrupt.h>
 #include <ti/ipc/family/omapl138/InterruptDsp.h>
-#include <ti/ipc/rpmsg/VirtQueue.h>
+#include <ti/resources/IpcMemory.h>
 
 #include <ti/ipc/MultiProc.h>
 
@@ -374,6 +375,8 @@ Void VirtQueue_Instance_init(VirtQueue_Object *vq, UInt16 remoteProcId,
     void *vring_phys;
     Error_Block eb;
 
+    VirtQueue_module->traceBufPtr = IpcMemory_getTraceBufPtr();
+
     Error_init(&eb);
 
     vq->vringPtr = Memory_calloc(NULL, sizeof(struct vring), 0, &eb);
@@ -503,6 +506,8 @@ Void VirtQueue_cacheWb()
 
     oldticks = newticks;
 
-    /* Flush the cache */
-    Cache_wbAll();
+    /* Flush the cache of the SysMin buffer only: */
+    Assert_isTrue((VirtQueue_module->traceBufPtr != NULL), NULL);
+    Cache_wb(VirtQueue_module->traceBufPtr, SysMin_bufSize, Cache_Type_ALL,
+             FALSE);
 }

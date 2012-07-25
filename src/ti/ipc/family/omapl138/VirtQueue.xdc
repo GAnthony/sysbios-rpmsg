@@ -344,6 +344,7 @@ internal:   /* not for client use */
         UInt16 hostSlaveSynced;
         UInt16 virtQueueInitialized;
         UInt32 *queueRegistry;
+        Ptr    traceBufPtr;
     }
 
     /*!
