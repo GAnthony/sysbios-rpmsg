@@ -78,7 +78,6 @@ Void tsk1Fxn(UArg arg0, UArg arg1)
     MessageQ_Handle  messageQ;
     MessageQ_QueueId remoteQueueId;
     Int              status;
-    UInt             procId = MultiProc_getId("HOST");
     int              i;
 
     /* Create a message queue. */
@@ -96,7 +95,7 @@ Void tsk1Fxn(UArg arg0, UArg arg1)
     System_printf("Start the main loop\n");
     while (1) {
         /* Get one block (8Kb) of data passed as a pointer to shared memory */
-        status = MessageQ_get(messageQ, (MessageQ_Msg *)&inMsg, 
+        status = MessageQ_get(messageQ, (MessageQ_Msg *)&inMsg,
                               MessageQ_FOREVER);
         if (status != MessageQ_S_SUCCESS) {
            System_abort("This should not happen since timeout is forever\n");
