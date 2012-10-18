@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, Texas Instruments Incorporated
+ * Copyright (c) 2011-2012, Texas Instruments Incorporated
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -60,13 +60,9 @@
 #include <xdc/runtime/Memory.h>
 #include <xdc/runtime/Log.h>
 #include <xdc/runtime/Diags.h>
-#include <xdc/runtime/Startup.h>
 #include <xdc/runtime/SysMin.h>
 
-#include <ti/sysbios/hal/Hwi.h>
-#include <ti/sysbios/knl/Semaphore.h>
 #include <ti/sysbios/knl/Clock.h>
-#include <ti/sysbios/BIOS.h>
 #include <ti/sysbios/hal/Cache.h>
 #include <ti/sysbios/knl/Swi.h>
 
@@ -143,11 +139,6 @@ enum {
 #define CONSOLE_DSP_TO_A9 2
 #define CONSOLE_A9_TO_DSP 3
 
-#if 0
-#define ID_APPM3_TO_A9      200
-#define ID_A9_TO_APPM3      201
-#endif
-
 static VirtQueue_Object *queueRegistry[NUM_QUEUES] = {NULL};
 
 static inline Void * mapPAtoVA(UInt pa)
@@ -160,7 +151,7 @@ static inline UInt mapVAtoPA(Void * va)
     return ((UInt)va & 0x000fffffU) | 0xc9000000U;
 }
 
-/*!
+/*
  * ======== VirtQueue_kick ========
  */
 Void VirtQueue_kick(VirtQueue_Handle vq)
@@ -180,7 +171,7 @@ Void VirtQueue_kick(VirtQueue_Handle vq)
     InterruptDsp_intSend(vq->procId, NULL, vq->id);
 }
 
-/*!
+/*
  * ======== VirtQueue_addUsedBuf ========
  */
 Int VirtQueue_addUsedBuf(VirtQueue_Handle vq, Int16 head)
@@ -205,7 +196,7 @@ Int VirtQueue_addUsedBuf(VirtQueue_Handle vq, Int16 head)
     return (0);
 }
 
-/*!
+/*
  * ======== VirtQueue_addAvailBuf ========
  */
 Int VirtQueue_addAvailBuf(VirtQueue_Object *vq, Void *buf)
@@ -228,7 +219,7 @@ Int VirtQueue_addAvailBuf(VirtQueue_Object *vq, Void *buf)
     return (vq->num_free);
 }
 
-/*!
+/*
  * ======== VirtQueue_getUsedBuf ========
  */
 Void *VirtQueue_getUsedBuf(VirtQueue_Object *vq)
@@ -251,7 +242,7 @@ Void *VirtQueue_getUsedBuf(VirtQueue_Object *vq)
     return (buf);
 }
 
-/*!
+/*
  * ======== VirtQueue_getAvailBuf ========
  */
 Int16 VirtQueue_getAvailBuf(VirtQueue_Handle vq, Void **buf)
@@ -287,26 +278,7 @@ Int16 VirtQueue_getAvailBuf(VirtQueue_Handle vq, Void **buf)
     return (head);
 }
 
-/*!
- * ======== VirtQueue_disableCallback ========
- */
-Void VirtQueue_disableCallback(VirtQueue_Object *vq)
-{
-    Log_print0(Diags_USER1, "VirtQueue_disableCallback called.");
-}
-
-/*!
- * ======== VirtQueue_enableCallback ========
- */
-Bool VirtQueue_enableCallback(VirtQueue_Object *vq)
-{
-    Log_print0(Diags_USER1, "VirtQueue_enableCallback called.");
-
-    //TODO
-    return (FALSE);
-}
-
-/*!
+/*
  * ======== VirtQueue_isr ========
  * Note 'arg' is ignored: it is the Hwi argument, not the mailbox argument.
  */
@@ -363,7 +335,7 @@ Void VirtQueue_isr(UArg msg)
 }
 
 
-/*!
+/*
  * ======== VirtQueue_create ========
  */
 Void VirtQueue_Instance_init(VirtQueue_Object *vq, UInt16 remoteProcId,
@@ -415,15 +387,6 @@ Void VirtQueue_Instance_init(VirtQueue_Object *vq, UInt16 remoteProcId,
 }
 
 /*
- *  ======== VirtQueue_Instance_finalize ========
- */
-Void VirtQueue_Instance_finalize(VirtQueue_Object *vq, Int status)
-{
-    queueRegistry[vq->id] = (VirtQueue_Object *)NULL;
-    Memory_free(NULL, vq->vringPtr, sizeof(struct vring));
-}
-
-/*!
  * ======== VirtQueue_startup ========
  */
 Void VirtQueue_startup(UInt16 remoteProcId, Bool isHost)
@@ -470,7 +433,7 @@ Swi_Handle VirtQueue_getSwiHandle(VirtQueue_Handle vq)
   return (vq->swiHandle);
 }
 
-/*!
+/*
  * ======== postCrashToMailbox ========
  */
 Void postCrashToMailbox(Error_Block * eb)
@@ -482,7 +445,7 @@ Void postCrashToMailbox(Error_Block * eb)
 
 #define CACHE_WB_TICK_PERIOD    5
 
-/*!
+/*
  * ======== VirtQueue_cacheWb ========
  *
  * Used for flushing SysMin trace buffer.
