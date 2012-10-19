@@ -35,14 +35,12 @@
  *
  */
 var IpcMemory;
-var MultiProc;
 
 /*
  *  ======== module$meta$init ========
  */
 function module$use()
 {
-    MultiProc = xdc.module('ti.sdo.utils.MultiProc');
     IpcMemory = this;
 
     var memmap = Program.cpu.memoryMap;
@@ -61,13 +59,10 @@ function module$use()
         addr = segment.base;
     }
 
-    if (MultiProc.id == MultiProc.getIdMeta("CORE0") ||
-        MultiProc.id == MultiProc.getIdMeta("DSP")) {
-        /* The .resource_table section should always be at the segment base */
-        Program.sectMap[".resource_table"] = new Program.SectionSpec();
-        Program.sectMap[".resource_table"].type = "NOINIT";
-        Program.sectMap[".resource_table"].loadAddress = addr;
-    }
+    /* The .resource_table section should always be at the segment base */
+    Program.sectMap[".resource_table"] = new Program.SectionSpec();
+    Program.sectMap[".resource_table"].type = "NOINIT";
+    Program.sectMap[".resource_table"].loadAddress = addr;
 }
 
 function module$static$init(obj, params)
@@ -85,7 +80,7 @@ function module$static$init(obj, params)
         if (null == segment) {
             this.$logError("IpcMemory.loadSegment not found", this);
         }
-        print("IpcMemory.loadSegment", IpcMemory.loadSegment);
+//        print("IpcMemory.loadSegment", IpcMemory.loadSegment);
         addr = segment.base;
     }
 

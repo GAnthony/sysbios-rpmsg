@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, Texas Instruments Incorporated
+ * Copyright (c) 2011-2012, Texas Instruments Incorporated
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -33,51 +33,7 @@
  *  ======== package.bld ========
  */
 
-var testBld = xdc.loadCapsule("ti/build/test.bld");
-var commonBld = xdc.loadCapsule("ti/build/common.bld");
+var Pkg = xdc.useModule('xdc.bld.PackageContents');
 
-/*
- *  ======== testArray ========
- *
- *  Example:
- *    var testArray = [
- *        {name: Test1},
- *        {name: Test2, sources: ["Test"], config: "Test", refOutput: "Test", timeout: "15", buildTargets: ["C64", "C28_large"]}
- *    ];
- */
-
-var objList_64T = [
-      "MessageQCopy",
-      "VirtQueue",
-      "InterruptDsp",
-];
-
-var trgFilter_64T = {
-        field: "isa",
-        list: [ "64T" ]
-};
-
-var objList_m3 = [
-      "MessageQCopy",
-      "VirtQueue",
-      "InterruptM3",
-];
-
-var trgFilter_m3 = {
-        field: "isa",
-        list: [ "v7M" ]
-};
-
-/* generate makefiles */
-arguments = ["profile=debug platform=all"];
-commonBld.buildLibs(objList_64T, undefined, trgFilter_64T, arguments);
-commonBld.buildLibs(objList_m3, undefined, trgFilter_m3, arguments);
-
-arguments = ["profile=release platform=all"];
-commonBld.buildLibs(objList_64T, undefined, trgFilter_64T, arguments);
-commonBld.buildLibs(objList_m3, undefined, trgFilter_m3, arguments);
-
-Pkg.attrs.exportSrc = false;
-Pkg.otherFiles = [
-    "MessageQCopy.h"
-];
+/* This package doesn't build any libraries, just exports a header */
+Pkg.otherFiles = ["package.bld", "Rpmsg.h"];

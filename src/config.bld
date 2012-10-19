@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, Texas Instruments Incorporated
+ * Copyright (c) 2011-2012, Texas Instruments Incorporated
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -31,49 +31,55 @@
  */
 /*
  *  ======== config.bld ========
- *  Sample Build configuration script
+ *  Build configuration script
  */
 
-/* Default tools locations */
-var armcgt_linux   = "/opt/TI/TMS470CGT4.9.0"
-var dspcgt_linux   = "/opt/TI/C6000CGT7.2.0"
-var armcgt_windows = "C:/Program Files/Texas Instruments/TMS470 Code Generation Tools 4.9.0"
-var dspcgt_windows = "C:/Program Files/Texas Instruments/C6000 Code Generation Tools 7.2.0"
+/*
+ * Common options for C6x
+ *
+ * -pdr     : show remarks
+ * -pden    : show id's assocated with err/warn/remarks
+ * -pds=238 : suppress "controlling expression is constant" remark (often
+ *            seen in Assert usage
+ * -pds=880 : suppress "unreferenced variable" remark
+ */
+var c6xOpts = " -mi10 -mo -pdr -pden -pds=238 -pds=880 -g ";
 
-/* Exported tools locations to supercede defaults */
-var armcgt_env = java.lang.System.getenv("TMS470CGTOOLPATH");
-var dspcgt_env = java.lang.System.getenv("C6000CGTOOLPATH");
+var ccOpts = {
+    "ti.targets.elf.C64T"             : c6xOpts,
+    "ti.targets.elf.C674"             : c6xOpts,
 
-/* Configure code generation tools paths */
-if (Build.hostOSName == 'Linux') {
-    var arm_cgtools_rootdir = armcgt_env ? armcgt_env : armcgt_linux;
-    var c6x_cgtools_rootdir = dspcgt_env ? dspcgt_env : dspcgt_linux;
-} else {
-    var arm_cgtools_rootdir = armcgt_env ? armcgt_env : armcgt_windows;
-    var c6x_cgtools_rootdir = dspcgt_env ? dspcgt_env : dspcgt_windows;
+    "ti.targets.arm.elf.M3"           : " -ms -pdr -pden -pds=238 -pds=880 -g "
+};
+
+var platforms = {
+    "ti.targets.elf.C64T"             : ["ti.platform.omap4430.dsp"],
+    "ti.targets.elf.C674"             : ["ti.platforms.evmOMAPL138:DSP"],
+
+    "ti.targets.arm.elf.M3"           : ["ti.platform.omap4430.core0",
+					 "ti.platform.omap4430.core1"]
+};
+
+/* initialize local vars with those set in xdcpaths.mak (via XDCARGS) */
+for (arg = 0; arg < arguments.length; arg++) {
+    /*
+     * Get the compiler's installation directory.
+     * For "ti.targets.elf.C674=/vendors/c6x/7.2.0", we get "/vendors/c6x/7.2.0"
+     */
+    var targetName = arguments[arg].split("=")[0];
+    var rootDir = arguments[arg].split("=")[1];
+
+    /* only build for the specified compilers */
+    if (rootDir == "" || rootDir == undefined) {
+        continue;
+    }
+
+    var target = xdc.useModule(targetName);
+    target.rootDir = rootDir;
+    target.ccOpts.suffix += ccOpts[targetName];
+    target.platforms = platforms[targetName];
+    Build.targets.$add(target);
 }
-
-/* Setup for C64T target */
-var C64T = xdc.useModule('ti.targets.elf.C64T');
-C64T.rootDir = c6x_cgtools_rootdir;
-C64T.ccOpts.suffix += " -mi10 -mo ";
-/* Set default platform and list of all interested platforms for c64T */
-C64T.platforms = [
-                    "ti.platform.omap4430.dsp",
-                ];
-C64T.platform = C64T.platforms[0];
-
-/* Setup for M3 target */
-var M3 = xdc.useModule('ti.targets.arm.elf.M3');
-M3.rootDir = arm_cgtools_rootdir;
-M3.ccOpts.suffix += " --embed_inline_assembly -ms -pds=71";
-M3.lnkOpts.prefix += " --retain=.resource_table";
-/* Set default platform and list of all interested platforms for M3 */
-M3.platforms = [
-                  "ti.platform.omap4430.core0",
-                  "ti.platform.omap4430.core1",
-               ];
-M3.platform = M3.platforms[0];
 
 var evmOMAPL138_ExtMemMap = {
     DDR: {
@@ -81,33 +87,29 @@ var evmOMAPL138_ExtMemMap = {
         base: 0xc4000000,
         len:  0x00800000,
         space: "code/data"
-    },
+    }
 };
 
 Build.platformTable["ti.platforms.evmOMAPL138:DSP"] = {
     externalMemoryMap: [
-        [ "DDR", evmOMAPL138_ExtMemMap.DDR ],
+        [ "DDR", evmOMAPL138_ExtMemMap.DDR ]
     ],
     codeMemory: "DDR",
     dataMemory: "DDR",
     stackMemory: "DDR",
-    l2Mode: "32k",
+    l2Mode: "32k"
 };
 
 
-/* Setup for C674 target */
-var C674 = xdc.useModule('ti.targets.elf.C674');
-C674.rootDir = c6x_cgtools_rootdir;
-C674.ccOpts.suffix += " -mi10 -mo --gcc ";
-/* Set default platform and list of all interested platforms for c64T */
-C674.platforms = [
-                     "ti.platforms.evmOMAPL138:DSP",
-                 ];
-C674.platform = C674.platforms[0];
 
-/* Uncomment the required targets */
-Build.targets = [
-                    //C64T,
-                    C674,
-                    M3,
-                ];
+/* Eliminate profiles that aren't debug or release */
+for (var t = 0; t < Build.targets.length; t++) {
+//    print("Inspecting target " + Build.targets[t]);
+    for (prof in Build.targets[t].profiles) {
+//      print("Inspecting profile " + prof);
+        if ((prof != "debug") && (prof != "release")) {
+//          print("Deleting profile " + Build.targets[t].profiles[prof]);
+            delete Build.targets[t].profiles[prof];
+        }
+    }
+}

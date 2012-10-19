@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, Texas Instruments Incorporated
+ * Copyright (c) 2011-2012, Texas Instruments Incorporated
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -28,20 +28,19 @@
  * WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR
  * OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE,
  * EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
- * */
+ */
 /*
  *  ======== package.xs ========
- *
  */
-
 
 /*
  *  ======== close ========
  */
 function close()
 {
-    Program.exportModule('ti.sysbios.hal.Cache');
-    Program.exportModule('ti.sysbios.knl.Idle');
+    /* bring in modules we use in this package */
+    xdc.useModule('ti.sysbios.knl.Swi');
+    xdc.useModule('ti.sysbios.hal.Cache');
 }
 
 
@@ -51,9 +50,6 @@ function close()
 function getLibs(prog)
 {
     var suffix = prog.build.target.findSuffix(this);
-
-    var ompProfile = "debug";
-
     if (suffix == null) {
         /* no matching lib found in this package, return "" */
         $trace("Unable to locate a compatible library, returning none.",
@@ -62,15 +58,17 @@ function getLibs(prog)
     }
 
     /* the location of the libraries are in lib/<profile>/* */
-    var lib = "lib/" + ompProfile + "/ti.ipc.family.omapl138.a" + suffix;
+    var name = this.$name + ".a" + suffix;
+    var lib = "lib/" + this.profile + "/" + name;
 
 
     /*
      * If the requested profile doesn't exist, we return the 'release' library.
      */
     if (!java.io.File(this.packageBase + lib).exists()) {
-        print("cant find " + this.packageBase + lib);
-        $trace("Unable to locate lib for requested '" + this.profile);
+        $trace("Unable to locate lib for requested '" + this.profile +
+                "' profile.  Using 'release' profile.", 1, ['getLibs']);
+        lib = "lib/release/" + name;
     }
 
     return (lib);

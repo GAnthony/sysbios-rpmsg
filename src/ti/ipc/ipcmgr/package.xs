@@ -1,4 +1,4 @@
-/* 
+/*
  * Copyright (c) 2012, Texas Instruments Incorporated
  * All rights reserved.
  *
@@ -40,9 +40,6 @@
 function getLibs(prog)
 {
     var suffix = prog.build.target.findSuffix(this);
-
-    var ompProfile = "debug";
-
     if (suffix == null) {
         /* no matching lib found in this package, return "" */
         $trace("Unable to locate a compatible library, returning none.",
@@ -51,15 +48,16 @@ function getLibs(prog)
     }
 
     /* the location of the libraries are in lib/<profile>/* */
-    var lib = "lib/" + ompProfile + "/ti.ipc.ipcmgr.a" + suffix;
+    var lib = "lib/" + this.profile + "/ti.ipc.ipcmgr.a" + suffix;
 
 
     /*
      * If the requested profile doesn't exist, we return the 'release' library.
      */
     if (!java.io.File(this.packageBase + lib).exists()) {
-        print("cant find " + this.packageBase + lib);
-        $trace("Unable to locate lib for requested '" + this.profile);
+        $trace("Unable to locate lib for requested '" + this.profile +
+                "' profile.  Using 'release' profile.", 1, ['getLibs']);
+        lib = "lib/release/ti.ipc.ipcmgr.a" + suffix;
     }
 
     return (lib);

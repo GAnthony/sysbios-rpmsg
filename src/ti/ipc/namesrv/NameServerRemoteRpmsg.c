@@ -48,7 +48,6 @@
 #include <ti/sdo/utils/INameServerRemote.h>
 #include <ti/ipc/MultiProc.h>
 #include <ti/ipc/namesrv/_NameServerRemoteRpmsg.h>
-#include <ti/ipc/rpmsg/Rpmsg.h>
 #include <ti/ipc/transports/_TransportVirtio.h>
 
 #include "package/internal/NameServerRemoteRpmsg.xdc.h"
@@ -126,10 +125,10 @@ Int NameServerRemoteRpmsg_attach(UInt16 remoteProcId, Ptr sharedAddr)
 #define FXNN "NameServerRemoteRpmsg_detach"
 Int NameServerRemoteRpmsg_detach(UInt16 remoteProcId)
 {
-    Log_print1(Diags_INFO, FXNN": remoteProcId: %d", remoteProcId);
-
     NameServerRemoteRpmsg_Handle handle;
     Int status = NameServerRemoteRpmsg_S_SUCCESS;
+
+    Log_print1(Diags_INFO, FXNN": remoteProcId: %d", remoteProcId);
 
     for (handle = NameServerRemoteRpmsg_Object_first(); handle != NULL;
         handle = NameServerRemoteRpmsg_Object_next(handle)) {
@@ -154,12 +153,8 @@ Int NameServerRemoteRpmsg_detach(UInt16 remoteProcId)
  */
 #define FXNN "NameServerRemoteRpmsg_get"
 Int NameServerRemoteRpmsg_get(NameServerRemoteRpmsg_Object *obj,
-                        String instanceName,
-                        String name,
-                        Ptr value,
-                        UInt32 *valueLen,
-                        ISync_Handle syncHandle,
-                        Error_Block *eb)
+        String instanceName, String name, Ptr value, UInt32 *valueLen,
+        ISync_Handle syncHandle, Error_Block *eb)
 {
     Int                   status = NameServer_E_NOTFOUND;
     Int                   len;

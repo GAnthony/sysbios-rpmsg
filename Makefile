@@ -1,5 +1,5 @@
 #
-# Copyright (c) 2011, Texas Instruments Incorporated
+# Copyright (c) 2011-2012 Texas Instruments Incorporated
 # All rights reserved.
 #
 # Redistribution and use in source and binary forms, with or without
@@ -46,11 +46,28 @@ export XDCROOT	= $(XDCDIST_TREE)
 
 export XDCPATH	= $(BIOSPROD)/packages;$(IPCPROD)/packages;./src;
 
+#ti.targets.arm.elf.M3 = /db/toolsrc/library/vendors2005/ti/arm/4.9.0/Linux
+#ti.targets.elf.C64T = /db/toolsrc/library/vendors2005/ti/c6x/7.2.0/Linux
+ti.targets.elf.C674 = /db/toolsrc/library/vendors2005/ti/c6x/7.2.0/Linux
+
+PKGLIST = src/ti/ipc/family/omapl138 \
+	src/ti/ipc/namesrv \
+	src/ti/ipc/rpmsg \
+	src/ti/ipc/tests \
+	src/ti/ipc/transports \
+	src/ti/ipc/ipcmgr \
+	src/ti/resources
+
+XDCARGS = \
+    ti.targets.arm.elf.M3=\"$(ti.targets.arm.elf.M3)\" \
+    ti.targets.elf.C64T=\"$(ti.targets.elf.C64T)\" \
+    ti.targets.elf.C674=\"$(ti.targets.elf.C674)\"
+
 all:
-	$(XDCROOT)/xdc -k -j $(j) -P `$(XDCROOT)/bin/xdcpkg src/ti |  egrep -v -e "/apps" | xargs`
+	$(XDCROOT)/xdc XDCARGS="$(XDCARGS)" release -j $(j) -P $(PKGLIST)
 
 clean:
-	$(XDCROOT)/xdc clean -Pr src
+	$(XDCROOT)/xdc clean -j $(j) -P $(PKGLIST)
 
 .PHONY: tags
 tags:

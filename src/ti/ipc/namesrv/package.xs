@@ -34,14 +34,22 @@
  */
 
 /*
+ *  ======== close ========
+ */
+function close()
+{
+    /* bring in modules we use in this package */
+    xdc.useModule('ti.sysbios.gates.GateMutex');
+    xdc.useModule('ti.sysbios.knl.Semaphore');
+}
+
+
+/*
  *  ======== getLibs ========
  */
 function getLibs(prog)
 {
     var suffix = prog.build.target.findSuffix(this);
-
-    var ompProfile = "debug";
-
     if (suffix == null) {
         /* no matching lib found in this package, return "" */
         $trace("Unable to locate a compatible library, returning none.",
@@ -50,15 +58,17 @@ function getLibs(prog)
     }
 
     /* the location of the libraries are in lib/<profile>/* */
-    var lib = "lib/" + ompProfile + "/ti.ipc.namesrv.a" + suffix;
+    var name = this.$name + ".a" + suffix;
+    var lib = "lib/" + this.profile + "/" + name;
 
 
     /*
      * If the requested profile doesn't exist, we return the 'release' library.
      */
     if (!java.io.File(this.packageBase + lib).exists()) {
-        print("cant find " + this.packageBase + lib);
-        $trace("Unable to locate lib for requested '" + this.profile);
+        $trace("Unable to locate lib for requested '" + this.profile +
+                "' profile.  Using 'release' profile.", 1, ['getLibs']);
+        lib = "lib/release/" + name;
     }
 
     return (lib);

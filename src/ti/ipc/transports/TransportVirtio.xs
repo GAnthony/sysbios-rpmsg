@@ -33,33 +33,23 @@
  *  ======== TransportVirtio.xs ================
  */
 
-var TransportVirtio  = null;
-var MessageQ         = null;
-var MultiProc        = null;
-var Swi              = null;
-var TransportVirtioSetup   = null;
-
 /*
  *  ======== module$use ========
  */
 function module$use()
 {
-    TransportVirtio = this;
-    MultiProc       = xdc.useModule("ti.sdo.utils.MultiProc");
-    MessageQ        = xdc.useModule("ti.sdo.ipc.MessageQ");
-    Swi             = xdc.useModule("ti.sysbios.knl.Swi");
-    TransportVirtioSetup = xdc.useModule("ti.ipc.transports.TransportVirtioSetup");
+    var TransportVirtio = this;
+    xdc.useModule("ti.sdo.utils.MultiProc");
+    xdc.useModule("ti.sdo.ipc.MessageQ");
+    xdc.useModule("ti.sysbios.knl.Swi");
+    xdc.useModule("ti.ipc.transports.TransportVirtioSetup");
     xdc.loadPackage("ti.ipc.namesrv");
-    if (Program.platformName.match(/OMAPL138/)) {
-        VirtQueue       = xdc.useModule("ti.ipc.family.omapl138.VirtQueue");
-        xdc.loadPackage("ti.ipc.family.omapl138");
-    }
-    else if (Program.platformName.match(/omap4430/)) {
-        VirtQueue       = xdc.useModule("ti.ipc.family.omap4430.VirtQueue");
-        xdc.loadPackage("ti.ipc.family.omap4430");
+
+    if (Program.cpu.deviceName == "OMAPL138") {
+        xdc.useModule("ti.ipc.family.omapl138.VirtQueue");
     }
     else {
-        print("TransportVirtio.xs: Did not match any platform!\n");
+        print("TransportVirtio.xs: Did not match any platform!");
     }
 }
 /*

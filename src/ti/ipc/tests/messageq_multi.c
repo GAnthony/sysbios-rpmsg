@@ -62,14 +62,13 @@ static int numTests = 0;
  *  Inputs:
  *     - arg0: number of the thread, appended to MessageQ host and slave names.
  */
-Void loopbackFxn (UArg arg0, UArg arg1)
+Void loopbackFxn(UArg arg0, UArg arg1)
 {
     MessageQ_Msg     getMsg;
     MessageQ_Handle  messageQ;
     MessageQ_QueueId remoteQueueId;
     Int              status;
     UInt16           msgId = 0;
-    UInt             procId = MultiProc_getId("HOST");
     Char             localQueueName[64];
     Char             hostQueueName[64];
 
@@ -81,7 +80,7 @@ Void loopbackFxn (UArg arg0, UArg arg1)
     /* Create a message queue. */
     messageQ = MessageQ_create(localQueueName, NULL);
     if (messageQ == NULL) {
-        System_abort("MessageQ_create failed\n" );
+        System_abort("MessageQ_create failed\n");
     }
 
     System_printf("loopbackFxn: created MessageQ: %s; QueueID: 0x%x\n",
@@ -98,7 +97,8 @@ Void loopbackFxn (UArg arg0, UArg arg1)
 
 #ifndef BENCHMARK
         System_printf("%d: Received message #%d from core %d\n",
-                     arg0, MessageQ_getMsgId(getMsg), procId);
+                arg0, MessageQ_getMsgId(getMsg),
+                MessageQ_getProcId(remoteQueueId));
 #endif
         /* test id of message received */
         if (MessageQ_getMsgId(getMsg) != msgId) {
@@ -107,8 +107,8 @@ Void loopbackFxn (UArg arg0, UArg arg1)
 
 #ifndef BENCHMARK
         /* Send it back */
-        System_printf("%d: Sending message Id #%d to core %d\n", 
-                      arg0, msgId, procId);
+        System_printf("%d: Sending message Id #%d to core %d\n",
+                      arg0, msgId, MessageQ_getProcId(remoteQueueId));
 #endif
         status = MessageQ_put(remoteQueueId, getMsg);
         if (status != MessageQ_S_SUCCESS) {
@@ -116,7 +116,7 @@ Void loopbackFxn (UArg arg0, UArg arg1)
         }
         msgId++;
     }
-    
+
     MessageQ_delete(&messageQ);
     numTests += NUMLOOPS;
 
