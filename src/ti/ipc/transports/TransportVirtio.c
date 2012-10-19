@@ -88,11 +88,14 @@
 
 #include <ti/ipc/rpmsg/virtio_ring.h>
 #include <ti/ipc/rpmsg/Rpmsg.h>
+
 /* TBD: VirtQueue.h needs to live in a common directory, not family specific.*/
-#ifdef OMAPL138
+#if defined(OMAPL138)
 #include <ti/ipc/family/omapl138/VirtQueue.h>
-#elif OMAP4430
+#elif defined(OMAP4430)
 #include <ti/ipc/family/omap4430/VirtQueue.h>
+#else
+#error unknown processor!
 #endif
 
 #include <ti/ipc/namesrv/_NameServerRemoteRpmsg.h>
@@ -199,7 +202,7 @@ void sendRpmsg(UInt16 dstProc, UInt32 dstEndpt, UInt32 srcEndpt,
     if (dstProc != MultiProc_self()) {
         /* Send to remote processor: */
         /* Protect vring structs. */
-        key = GateSwi_enter(TransportVirtio_module->gateSwiHandle);  
+        key = GateSwi_enter(TransportVirtio_module->gateSwiHandle);
         token = VirtQueue_getAvailBuf(vq_host, (Void **)&msg);
         GateSwi_leave(TransportVirtio_module->gateSwiHandle, key);
 
@@ -359,7 +362,7 @@ Void TransportVirtio_Instance_finalize(TransportVirtio_Object *obj, Int status)
     if (swiHandle != NULL) {
       Swi_destruct(Swi_struct(swiHandle));
     }
-    
+
     GateSwi_delete(&(TransportVirtio_module->gateSwiHandle));
 
     /* Delete the VirtQueue instance */
@@ -408,7 +411,7 @@ Bool TransportVirtio_put(TransportVirtio_Object *obj, Ptr msg)
                  obj->isHost);
 
     /* Send to remote processor: */
-    key = GateSwi_enter(TransportVirtio_module->gateSwiHandle);  
+    key = GateSwi_enter(TransportVirtio_module->gateSwiHandle);
     if (obj->isHost)  {
        rpMsg = getTxBuf(obj, obj->vq_slave);
     }
@@ -441,7 +444,7 @@ Bool TransportVirtio_put(TransportVirtio_Object *obj, Ptr msg)
                   (IArg)rpMsg, (IArg)rpMsg->srcAddr, (IArg)rpMsg->dstAddr,
                   (IArg)rpMsg->dataLen);
 
-        key = GateSwi_enter(TransportVirtio_module->gateSwiHandle);  
+        key = GateSwi_enter(TransportVirtio_module->gateSwiHandle);
         if (obj->isHost)  {
             VirtQueue_addAvailBuf(obj->vq_slave, rpMsg);
             VirtQueue_kick(obj->vq_slave);
