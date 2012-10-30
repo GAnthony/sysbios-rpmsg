@@ -48,13 +48,21 @@ var c6xOpts = " -mi10 -mo -pdr -pden -pds=238 -pds=880 -g ";
 var ccOpts = {
     "ti.targets.elf.C64T"             : c6xOpts,
     "ti.targets.elf.C674"             : c6xOpts,
-
+    "ti.targets.elf.C66"              : " -mv6600 -pds=238 -pds=880 -g ",
     "ti.targets.arm.elf.M3"           : " -ms -pdr -pden -pds=238 -pds=880 -g "
+};
+
+var lnkOpts = {
+    "ti.targets.elf.C64T"             : "",
+    "ti.targets.elf.C674"             : "",
+    "ti.targets.elf.C66"              : " -cr ",
+    "ti.targets.arm.elf.M3"           : ""
 };
 
 var platforms = {
     "ti.targets.elf.C64T"             : ["ti.platform.omap4430.dsp"],
     "ti.targets.elf.C674"             : ["ti.platforms.evmOMAPL138:DSP"],
+    "ti.targets.elf.C66"              : ["ti.platforms.evm6614:DSP"],
 
     "ti.targets.arm.elf.M3"           : ["ti.platform.omap4430.core0",
 					 "ti.platform.omap4430.core1"]
@@ -77,6 +85,7 @@ for (arg = 0; arg < arguments.length; arg++) {
     var target = xdc.useModule(targetName);
     target.rootDir = rootDir;
     target.ccOpts.suffix += ccOpts[targetName];
+    target.lnkOpts.suffix += lnkOpts[targetName];
     target.platforms = platforms[targetName];
     Build.targets.$add(target);
 }

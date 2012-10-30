@@ -34,7 +34,7 @@
 REPO            = /db/atree/gp/repo
 
 # Edit Dependency Versions:
-XDCROOTVER      = xdctools_3_22_04_46
+XDCROOTVER      = xdctools_3_23_02_47
 BIOSPRODVER	= bios_6_32_05_54
 IPCPRODVER	= ipc_1_24_00_16
 
@@ -48,20 +48,24 @@ export XDCPATH	= $(BIOSPROD)/packages;$(IPCPROD)/packages;./src;
 
 #ti.targets.arm.elf.M3 = /db/toolsrc/library/vendors2005/ti/arm/4.9.0/Linux
 #ti.targets.elf.C64T = /db/toolsrc/library/vendors2005/ti/c6x/7.2.0/Linux
-ti.targets.elf.C674 = /db/toolsrc/library/vendors2005/ti/c6x/7.2.0/Linux
+#ti.targets.elf.C674 = /db/toolsrc/library/vendors2005/ti/c6x/7.2.0/Linux
+ti.targets.elf.C66 = /db/toolsrc/library/vendors2005/ti/c6x/7.2.0/Linux
 
-PKGLIST = src/ti/ipc/family/omapl138 \
-	src/ti/ipc/namesrv \
-	src/ti/ipc/rpmsg \
-	src/ti/ipc/tests \
-	src/ti/ipc/transports \
-	src/ti/ipc/ipcmgr \
-	src/ti/resources
+PKGLIST = src/ti/ipc/tests
+
+#PKGLIST = src/ti/ipc/family/omapl138 \
+#	src/ti/ipc/namesrv \
+#	src/ti/ipc/rpmsg \
+#	src/ti/ipc/tests \
+#	src/ti/ipc/transports \
+#	src/ti/ipc/ipcmgr \
+#	src/ti/resources
 
 XDCARGS = \
     ti.targets.arm.elf.M3=\"$(ti.targets.arm.elf.M3)\" \
     ti.targets.elf.C64T=\"$(ti.targets.elf.C64T)\" \
-    ti.targets.elf.C674=\"$(ti.targets.elf.C674)\"
+    ti.targets.elf.C674=\"$(ti.targets.elf.C674)\" \
+    ti.targets.elf.C66=\"$(ti.targets.elf.C66)\"
 
 all:
 	$(XDCROOT)/xdc XDCARGS="$(XDCARGS)" release -j $(j) -P $(PKGLIST)
