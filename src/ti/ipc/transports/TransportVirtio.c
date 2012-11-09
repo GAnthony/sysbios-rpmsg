@@ -92,8 +92,8 @@
 /* TBD: VirtQueue.h needs to live in a common directory, not family specific.*/
 #if defined(OMAPL138)
 #include <ti/ipc/family/omapl138/VirtQueue.h>
-#elif defined(OMAP4430)
-#include <ti/ipc/family/omap4430/VirtQueue.h>
+#elif defined(TCI6614)
+#include <ti/ipc/family/tci6614/VirtQueue.h>
 #else
 #error unknown processor!
 #endif
@@ -176,6 +176,7 @@ static Void *getTxBuf(TransportVirtio_Object *obj, VirtQueue_Handle vq)
 /*  --------------  TEMP NameService over VirtQueue ----------------------- */
 
 /* -------------- TEMP NameService over rpmsg ----------------------- */
+#define FXNN "nameService_register"
 static void nameService_register(UInt16 dstProc, char * name, UInt32 port, enum Rpmsg_nsFlags flags)
 {
     struct Rpmsg_NsMsg nsMsg;
@@ -189,8 +190,13 @@ static void nameService_register(UInt16 dstProc, char * name, UInt32 port, enum 
     nsMsg.addr = port;
     nsMsg.flags = flags;
 
+    Log_print3(Diags_INFO, FXNN": %sing service %s on port %d",
+           (IArg)(flags == RPMSG_NS_CREATE? "creat":"destroy"),
+           (IArg)name, (IArg)port);
+
     sendRpmsg(dstProc, dstEndpt, srcEndpt, data, len);
 }
+#undef FXNN
 
 void sendRpmsg(UInt16 dstProc, UInt32 dstEndpt, UInt32 srcEndpt,
               Ptr data, UInt16 len)
@@ -272,8 +278,7 @@ Int TransportVirtio_Instance_init(TransportVirtio_Object *obj,
     }
 #else
     /* Hardcoded below until constraint mentioned above is lifted: */
-    obj->isHost = (MultiProc_self() == MultiProc_getId("CORE1")) ||
-                  (MultiProc_self() == MultiProc_getId("HOST"));
+    obj->isHost = (MultiProc_self() == MultiProc_getId("HOST"));
 #endif
 
     Log_print2(Diags_INFO, FXNN": remoteProc: %d, isHost: %d",

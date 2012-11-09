@@ -45,10 +45,15 @@ function module$use()
     xdc.useModule("ti.ipc.transports.TransportVirtioSetup");
     xdc.loadPackage("ti.ipc.namesrv");
 
+    print("Program.platformName: " + Program.platformName );
     if (Program.cpu.deviceName == "OMAPL138") {
         xdc.useModule("ti.ipc.family.omapl138.VirtQueue");
     }
-    else {
+    else if (Program.platformName.match(/6614/)) {
+        xdc.useModule("ti.ipc.family.tci6614.VirtQueue");
+    }
+    else
+    {
         print("TransportVirtio.xs: Did not match any platform!");
     }
 }
