@@ -37,11 +37,10 @@
  * Version: 01.00.00.00
  */
 #include <c6x.h>
-#include <stdio.h>
-#include <stdint.h>
 #include <xdc/std.h>
 #include <xdc/cfg/global.h>
 #include <xdc/runtime/System.h>
+#include <ti/sysbios/BIOS.h>
 
 struct resource {
     uint32_t type;
@@ -114,19 +113,15 @@ struct resource resources[] = {
     {TYPE_TRACE, 0, TRACEBUFADDR,0,0,0, TRACEBUFSIZE, 0,0,0,0,0,"trace:dsp"},
 };
 
-#define CORE_NO (DNUM + 1)
 
-int global_variable = 0;
-char *test_string = (char *)VRING0_DA;
-
-void main(void)
+Int main(Int argc, Char * argv[])
 {
-	System_printf("Main started on core %d\n", CORE_NO);
-	System_printf("VRING0_DA String: %s\n", test_string);
-	while(1){
-		if(global_variable != CORE_NO) {
-			global_variable = CORE_NO;
-			System_printf("Setting 'global_variable' to %d: id %d\n", CORE_NO, resources[0].type);
-		}
-	}
+    System_printf("Main started on core %d\n", DNUM);
+
+    /* Reference resource table, until IpcMemory.xdt is enabled for TCI6614 */
+    System_printf("Resource Table: VRING0_DA: 0x%lx\n", resources[1].da_low);
+
+    BIOS_start();
+
+    return(0);
 }
