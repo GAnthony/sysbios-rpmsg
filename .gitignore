@@ -27,5 +27,7 @@ src/ti/ipc/family/omap4430/InterruptM3.h
 src/ti/ipc/family/omap4430/VirtQueue.h
 src/ti/ipc/family/omapl138/InterruptDsp.h
 src/ti/ipc/family/omapl138/VirtQueue.h
+src/ti/ipc/family/tci6614/VirtQueue.h
+src/ti/ipc/family/tci6614/Interrupt.h
 src/ti/ipc/namesrv/NameServerRemoteRpmsg.h
 src/ti/resources/IpcMemory.h
