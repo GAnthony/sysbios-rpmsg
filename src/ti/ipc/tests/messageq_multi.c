@@ -48,6 +48,11 @@
 #include <ti/ipc/MessageQ.h>
 #include <ti/ipc/MultiProc.h>
 
+#ifdef TCI6614
+#include "rsc_table_tci6614.h"
+#endif
+
+#define SLAVE_MESSAGEQNAME "SLAVE"
 #define SLAVE_MESSAGEQNAME "SLAVE"
 #define HOST_MESSAGEQNAME "HOST"
 #define NUMTHREADS 10
@@ -132,6 +137,11 @@ Int main(Int argc, Char* argv[])
     Int i;
 
     System_printf("%s:main: MultiProc id = %d\n", __FILE__, MultiProc_self());
+
+#ifdef TCI6614
+    /* Reference resource table, until IpcMemory.xdt is enabled for TCI6614 */
+    System_printf("Resource Table: VRING0_DA: 0x%lx\n", resources[1].da_low);
+#endif
 
     /* Create N threads to correspond with host side N thread test app: */
     Task_Params_init(&params);

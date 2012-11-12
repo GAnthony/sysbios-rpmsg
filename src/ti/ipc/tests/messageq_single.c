@@ -48,6 +48,10 @@
 
 #include <ti/ipc/MessageQ.h>
 
+#ifdef TCI6614
+#include "rsc_table_tci6614.h"
+#endif
+
 #define SLAVE_MESSAGEQNAME "SLAVE"
 
 #define MessageQ_payload(m) ((void *)((char *)(m) + sizeof(MessageQ_MsgHeader)))
@@ -133,6 +137,11 @@ Void tsk1Fxn(UArg arg0, UArg arg1)
 Int main(Int argc, Char* argv[])
 {
     System_printf("%s:main: MultiProc id = %d\n", __FILE__, MultiProc_self());
+
+#ifdef TCI6614
+    /* Reference resource table, until IpcMemory.xdt is enabled for TCI6614 */
+    System_printf("Resource Table: VRING0_DA: 0x%lx\n", resources[1].da_low);
+#endif
 
     Task_create(tsk1Fxn, NULL, NULL);
 
