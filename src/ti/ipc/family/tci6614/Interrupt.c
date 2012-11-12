@@ -233,7 +233,7 @@ UInt Interrupt_intClear(UInt16 remoteProcId, IInterrupt_IntInfo *intInfo)
     extern volatile cregister Uns DNUM;
     volatile UInt32 *ipcgr = (volatile UInt32 *)Interrupt_IPCGR0;
     volatile UInt32 *ipcar = (volatile UInt32 *)Interrupt_IPCAR0;
-    UInt arg = Interrupt_INVALIDPAYLOAD;
+    UInt payload = Interrupt_INVALIDPAYLOAD;
     UInt val = ipcgr[DNUM];
 
     /* If interrupt originated at "HOST" clear signalling bits too */
@@ -241,17 +241,19 @@ UInt Interrupt_intClear(UInt16 remoteProcId, IInterrupt_IntInfo *intInfo)
     {
         if (val & IPCAR_INT_SRCS27) {
             Log_print1(Diags_USER1, "Interrupt_intClear: ipcgr: 0x%x\n", val);
-            arg = 1;  /* Dummy return value, not used. */
             /* Clear bit: Must match keystone_remoteproc kick. */
             ipcar[DNUM] = IPCAR_INT_SRCS27;
+            payload = val;
         }
     }
-    else {
+    else if (val & (1 << (MultiProcSetup_procMap[remoteProcId]
+                + Interrupt_SRCSx_SHIFT))) {
         ipcar[DNUM] =  (1 << (MultiProcSetup_procMap[remoteProcId] +
             Interrupt_SRCSx_SHIFT));
+        payload = val;
     }
 
-    return (arg);
+    return (payload);
 }
 
 /*
@@ -261,34 +263,26 @@ Void Interrupt_isr(UArg arg)
 {
     Int i;
     Interrupt_FxnTable *table;
-    extern volatile cregister Uns DNUM;
-    volatile UInt32 *ipcar = (volatile UInt32 *)Interrupt_IPCAR0;
-    UArg payload;
+    UArg ipcar;
 
+    ipcar = Interrupt_intClear(arg, NULL);
 
-    payload = ipcar[DNUM];
     Log_print1(Diags_USER1,
-        "InterruptDsp_isr: Interrupt received, payload = 0x%x",
-        (IArg)payload);
+        "InterruptDsp_isr: Interrupt received, payload = 0x%x", (IArg)ipcar);
 
     for (i = 0; i < MultiProc_getNumProcessors(); i++) {
-        if ((ipcar[DNUM]) & (1 << (MultiProcSetup_procMap[i]
-            + Interrupt_SRCSx_SHIFT))) {
-            table = &(Interrupt_module->fxnTable[i]);
 
-            if (table->func != NULL)
-            {
-                if (i == MultiProc_getId("HOST"))
-                {
-                  /* If interrupt source is the Host provide the value of the
-                   * IPCARx register to the service routine
-                   */
-                  (table->func)(ipcar[DNUM]);
-                }
-                else
-                {
-                  (table->func)(table->arg);
-                }
+        table = &(Interrupt_module->fxnTable[i]);
+        if (table->func != NULL) {
+
+            Log_print1(Diags_USER1,
+                "InterruptDsp_isr: calling isr func for proc: %d", i);
+
+            if (i == MultiProc_getId("HOST")) {
+                (table->func)(ipcar);
+            }
+            else {
+                (table->func)(table->arg);
             }
         }
     }
