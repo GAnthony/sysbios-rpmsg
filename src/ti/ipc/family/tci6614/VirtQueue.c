@@ -93,11 +93,22 @@
 #define ID_DSP_TO_A9      0
 #define ID_A9_TO_DSP      1
 
+extern volatile cregister Uns DNUM;
+
 static VirtQueue_Object *queueRegistry[NUM_QUEUES] = {NULL};
 
-static inline Void * mapPAtoVA(UInt pa)
+/* static inline */ Void * mapPAtoVA(UInt pa)
 {
-    return (Void *)((pa & 0x000fffffU) | 0xa0000000U);
+    Void *va;
+    UInt offset;
+
+    offset = (DNUM * VirtQueue_VRING_OFFSET);
+    va = (Void *)((pa & 0x000fffffU) | offset | 0xa0000000U);
+
+    Log_print3(Diags_USER1,
+            "mapPAtoVA: pa: 0x%x, offset: 0x%x, va: 0x%x\n",
+             pa, offset, (UInt)va);
+    return va;
 }
 
 static inline UInt mapVAtoPA(Void * va)
@@ -105,6 +116,26 @@ static inline UInt mapVAtoPA(Void * va)
     return ((UInt)va & 0x000fffffU) | 0xe1000000U;
 }
 
+
+/*
+ * ======== VirtQueue_init ========
+ */
+Void VirtQueue_init()
+{
+    extern cregister volatile UInt DNUM;
+    UInt16 procId;
+
+    /* Skip if the procId has already been set */
+    if (MultiProc_self() != MultiProc_INVALIDID) {
+        Log_print0(Diags_USER1, "VirtQueue_init(): MultiProc_self not set!\n");
+        return;
+    }
+
+    procId = DNUM + 1;
+
+    /* Set the local ID */
+    MultiProc_setLocalId(procId);
+}
 
 /*
  * ======== VirtQueue_Instance_init ========
@@ -134,10 +165,12 @@ Void VirtQueue_Instance_init(VirtQueue_Object *vq, UInt16 remoteProcId,
 
     switch (vq->id) {
         case ID_DSP_TO_A9:
-            vring_phys = (struct vring *) VirtQueue_IPU_MEM_VRING0;
+            vring_phys = (struct vring *) (VirtQueue_CORE0_MEM_VRING0 +
+                (DNUM * VirtQueue_VRING_OFFSET));
             break;
         case ID_A9_TO_DSP:
-            vring_phys = (struct vring *) VirtQueue_IPU_MEM_VRING1;
+            vring_phys = (struct vring *) (VirtQueue_CORE0_MEM_VRING1 +
+		(DNUM * VirtQueue_VRING_OFFSET));
             break;
     }
 

@@ -94,6 +94,7 @@ import  ti.sdo.utils.MultiProc;
  *
  */
 
+
 module VirtQueue
 {
     // -------- Module Constants --------
@@ -135,8 +136,9 @@ module VirtQueue
     // -------- Module Parameters --------
 
     /* Predefined device addresses */
-    config UInt32 IPU_MEM_VRING0 = 0xA0000000;
-    config UInt32 IPU_MEM_VRING1 = 0xA0004000;
+    config UInt32 CORE0_MEM_VRING0 = 0xA0000000;
+    config UInt32 CORE0_MEM_VRING1 = 0xA0004000;
+    config UInt32 VRING_OFFSET = 0x00080000;
 
     /*
      * Sizes of the virtqueues (expressed in number of buffers supported,
@@ -320,6 +322,7 @@ instance:
 
 internal:   /* not for client use */
 
+    void init();
 
     /*!
      *  ======== hostIsr ========

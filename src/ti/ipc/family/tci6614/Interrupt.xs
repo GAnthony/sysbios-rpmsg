@@ -80,8 +80,6 @@ function module$use()
 
     Hwi         = xdc.useModule("ti.sysbios.family.c64p.Hwi");
     MultiProc   = xdc.useModule("ti.sdo.utils.MultiProc");
-
-    MultiProcSetup  = xdc.useModule("ti.sdo.ipc.family.c647x.MultiProcSetup");
 }
 
 /*

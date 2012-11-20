@@ -43,7 +43,6 @@
 #include <ti/sysbios/family/c64p/Hwi.h>
 
 #include <ti/ipc/MultiProc.h>
-#include <ti/sdo/ipc/family/c647x/MultiProcSetup.h>
 #include <ti/sdo/ipc/notifyDrivers/IInterrupt.h>
 
 #include "Interrupt.h"
@@ -207,16 +206,15 @@ Void Interrupt_intSend(UInt16 remoteProcId, IInterrupt_IntInfo *intInfo,
       /* Interrupt is to be generated on the Host processor.  Go through
        * IPCGRH register
        */
-      /* TODO: Only most significant 4 bits of arg have control bits,
-       * must find good way to mask rest of bits before ORing with val
+      /* TODO: Would like OR in arg as a payload, but Linux ipc driver
+       * currently would interpret those as source bits.
        */
-      *ipcgrh = (val | arg);
+      *ipcgrh = val;
     }
     else
     {
       /* Interrupt is to be generated on another DSP. */
-      /* OR: ? ipcgr[DNUM] =  val; */
-      ipcgr[MultiProcSetup_procMap[remoteProcId]] =  val;
+      ipcgr[(remoteProcId-1)] =  val;
     }
 }
 
@@ -246,10 +244,8 @@ UInt Interrupt_intClear(UInt16 remoteProcId, IInterrupt_IntInfo *intInfo)
             payload = val;
         }
     }
-    else if (val & (1 << (MultiProcSetup_procMap[remoteProcId]
-                + Interrupt_SRCSx_SHIFT))) {
-        ipcar[DNUM] =  (1 << (MultiProcSetup_procMap[remoteProcId] +
-            Interrupt_SRCSx_SHIFT));
+    else if (val & (1 << ((remoteProcId-1)+ Interrupt_SRCSx_SHIFT))) {
+        ipcar[DNUM] =  (1 << ((remoteProcId-1)+ Interrupt_SRCSx_SHIFT));
         payload = val;
     }
 

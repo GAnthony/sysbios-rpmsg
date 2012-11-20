@@ -253,8 +253,6 @@ Int TransportVirtio_Instance_init(TransportVirtio_Object *obj,
     Swi_Handle  swiHandle;
     Swi_Params  swiParams;
     GateSwi_Params gatePrms;
-    Int         i;
-    Ptr         buf_addr = (Ptr)VirtQueue_IPU_MEM_VRING0;
     VirtQueue_Params vqParams;
 
     /* set object fields */
@@ -316,6 +314,7 @@ Int TransportVirtio_Instance_init(TransportVirtio_Object *obj,
     obj->vq_slave  = (Ptr)VirtQueue_create(remoteProcId, &vqParams, eb);
 
     if (obj->isHost)  {
+#if 0  /* This code is broken for multicore, and case where obj->isHost */
        /* Initialize fields used by getTxBuf(): */
             obj->sbufs = (Char *)buf_addr + VirtQueue_RP_MSG_NUM_BUFS * VirtQueue_RP_MSG_BUF_SIZE;
         obj->last_sbuf = 0;
@@ -326,6 +325,9 @@ Int TransportVirtio_Instance_init(TransportVirtio_Object *obj,
                                   ((Char *)buf_addr + i * VirtQueue_RP_MSG_BUF_SIZE));
        }
        VirtQueue_kick(obj->vq_host);
+#else
+       Assert_isTrue(FALSE, NULL);
+#endif
     }
 
     /* Plug Vring Interrupts, and wait for host read to recv kick: */

@@ -42,12 +42,17 @@ var VirtQueue = null;
 function module$use()
 {
 
+    VirtQueue = this;
     //IpcMemory   = xdc.useModule("ti.resources.IpcMemory");
     MultiProc   = xdc.useModule("ti.sdo.utils.MultiProc");
 
     Swi = xdc.useModule("ti.sysbios.knl.Swi");
     Interrupt = xdc.useModule("ti.ipc.family.tci6614.Interrupt");
 
+    if (MultiProc.id == MultiProc.INVALIDID) {
+        var Startup = xdc.useModule('xdc.runtime.Startup');
+        Startup.firstFxns.$add(VirtQueue.init);
+    }
 }
 
 /*
