@@ -46,6 +46,8 @@ Int main(Int argc, Char * argv[])
 {
     System_printf("Main started on core %d\n", DNUM);
 
+    System_printf("Resource Table: VRING0_DA: 0x%lx\n", resources[1].da_low);
+
     BIOS_start();
 
     return(0);
