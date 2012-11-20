@@ -65,6 +65,7 @@ Void tsk1Fxn(UArg arg0, UArg arg1)
     MessageQ_Msg msg;
     MessageQ_Handle  messageQ;
     MessageQ_QueueId remoteQueueId;
+    Char             localQueueName[64];
     UInt16 procId;
     Int status;
     UInt16 msgId;
@@ -74,13 +75,17 @@ Void tsk1Fxn(UArg arg0, UArg arg1)
     UInt32 print;
     UInt32 *params;
 
-    messageQ = MessageQ_create(SLAVE_MESSAGEQNAME, NULL);
+    /* Construct a MessageQ name adorned with core name: */
+    System_sprintf(localQueueName, "%s_%s", SLAVE_MESSAGEQNAME,
+                   MultiProc_getName(MultiProc_self()));
+
+    messageQ = MessageQ_create(localQueueName, NULL);
     if (messageQ == NULL) {
         System_abort("MessageQ_create failed\n" );
     }
 
     System_printf("tsk1Fxn: created MessageQ: %s; QueueID: 0x%x\n",
-        SLAVE_MESSAGEQNAME, MessageQ_getQueueId(messageQ));
+        localQueueName, MessageQ_getQueueId(messageQ));
 
     while (1) {
         /* handshake with host to get starting parameters */
@@ -108,14 +113,15 @@ Void tsk1Fxn(UArg arg0, UArg arg1)
             Assert_isTrue(status == MessageQ_S_SUCCESS, NULL);
 
             if (print) {
-                System_printf("Got msg #%d (%d bytes) from core %d\n",
+                System_printf("Got msg #%d (%d bytes) from procId %d\n",
                     MessageQ_getMsgId(msg), MessageQ_getMsgSize(msg), procId);
             }
 
             Assert_isTrue(MessageQ_getMsgId(msg) == msgId, NULL);
 
             if (print) {
-                System_printf("Sending msg Id #%d to core %d\n", msgId, procId);
+                System_printf("Sending msg Id #%d to procId %d\n", msgId,
+                              procId);
             }
 
             status = MessageQ_put(remoteQueueId, msg);
@@ -140,7 +146,8 @@ Int main(Int argc, Char* argv[])
 
 #ifdef TCI6614
     /* Reference resource table, until IpcMemory.xdt is enabled for TCI6614 */
-    System_printf("Resource Table: VRING0_DA: 0x%lx\n", resources[1].da_low);
+    System_printf("Resource Table: VRING0_DA_BASE: 0x%lx\n",
+                  resources[1].da_low);
 #endif
 
     Task_create(tsk1Fxn, NULL, NULL);
