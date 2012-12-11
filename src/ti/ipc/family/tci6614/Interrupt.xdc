@@ -58,11 +58,28 @@ module Interrupt inherits ti.sdo.ipc.notifyDrivers.IInterrupt
      */
     config Bool enableKick = true;
 
+    /*!
+     *  ======== Interrupt_intClearAll ========
+     *  Clear all pending interrupts.
+     */
+    Void intClearAll();
+
+    /*!
+     *  ======== Interrupt_checkAndClear =======
+     *  Check to see that interrupt is set, if so clear it and return 1.
+     */
+    UInt checkAndClear(UInt16 remoteProcId, IntInfo *intInfo);
+
 internal:
 
+    /*! Source ID bit position for CORE0 */
+    const UInt SRCS_BITPOS_CORE0 = 4;
 
-    /*! Shift value used for setting/identifying interrupt source */
-    const UInt SRCSx_SHIFT = 4;
+    /*! Source ID bit position for CORE3 */
+    const UInt SRCS_BITPOS_CORE3 = 7;
+
+    /*! Source ID bit position for HOST */
+    const UInt SRCS_BITPOS_HOST = 31;
 
     /*! Ptr to the IPC Generation Registers */
     config Ptr IPCGR0;
@@ -85,11 +102,15 @@ internal:
     /*! Inter-processor interrupt id (varies per device) */
     config UInt INTERDSPINT;
 
+    /*! Vector interrupt id for Hwi_create */
+    config UInt DSPINT;
+
     /*! Function table */
     struct FxnTable {
         Fxn    func;
         UArg   arg;
     }
+
 
     /*!
      *  ======== isr ========
@@ -98,7 +119,7 @@ internal:
     Void isr(UArg arg);
 
     struct Module_State {
-        FxnTable   fxnTable[];  /* One entry for each core */
+        FxnTable   fxnTable[];  /* indexed by Source ID bit pos */
         UInt       numPlugged;  /* # of times the interrupt was registered */
     };
 }

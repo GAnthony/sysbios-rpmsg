@@ -188,6 +188,7 @@ Void VirtQueue_Instance_init(VirtQueue_Object *vq, UInt16 remoteProcId,
  */
 Void VirtQueue_kick(VirtQueue_Handle vq)
 {
+    IInterrupt_IntInfo intInfo;
     struct vring *vring = vq->vringPtr;
 
     /* For now, simply interrupt remote processor */
@@ -200,7 +201,9 @@ Void VirtQueue_kick(VirtQueue_Handle vq)
     Log_print2(Diags_USER1,
             "VirtQueue_kick: Sending interrupt to proc %d with payload 0x%x\n",
             (IArg)vq->procId, (IArg)vq->id);
-    Interrupt_intSend(vq->procId, NULL, vq->id);
+
+    intInfo.localIntId  = Interrupt_SRCS_BITPOS_CORE0;
+    Interrupt_intSend(vq->procId, &intInfo, vq->id);
 }
 
 /*
@@ -312,7 +315,7 @@ Int16 VirtQueue_getAvailBuf(VirtQueue_Handle vq, Void **buf)
 
 /*
  * ======== VirtQueue_isr ========
- * Note 'arg' is ignored: it is the Hwi argument, not the mailbox argument.
+ * Note 'msg' is ignored: it is only used where there is a mailbox payload.
  */
 Void VirtQueue_isr(UArg msg)
 {
@@ -337,9 +340,9 @@ Void VirtQueue_startup(UInt16 remoteProcId, Bool isHost)
 {
     IInterrupt_IntInfo intInfo;
 
-    intInfo.intVectorId = 5;  /* Magic number! */
+    intInfo.intVectorId = Interrupt_DSPINT;
+    intInfo.localIntId  = Interrupt_SRCS_BITPOS_HOST;
 
-    Log_print0(Diags_USER1, "VirtQueue_startup: Polling for host int...\n");
 
     /*
      * Wait for first kick from host, which happens to coincide with the
@@ -347,9 +350,8 @@ Void VirtQueue_startup(UInt16 remoteProcId, Bool isHost)
      * Since interrupt is cleared, we throw away this first kick, which is
      * OK since we don't process this in the ISR anyway.
      */
-
-    while (Interrupt_intClear(remoteProcId, NULL) ==
-           Interrupt_INVALIDPAYLOAD);
+    Log_print0(Diags_USER1, "VirtQueue_startup: Polling for host int...\n");
+    while (!Interrupt_checkAndClear(remoteProcId, &intInfo));
 
     Interrupt_intRegister(remoteProcId, &intInfo, (Fxn)VirtQueue_isr, NULL);
 

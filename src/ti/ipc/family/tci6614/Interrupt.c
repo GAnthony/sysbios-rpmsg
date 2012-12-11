@@ -49,9 +49,15 @@
 
 #include "package/internal/Interrupt.xdc.h"
 
+extern volatile cregister Uns DNUM;
 
 Fxn userFxn = NULL;
 Void Interrupt_isr(UArg arg);
+
+/* Shift to source bit id for CORES 0-3 */
+#define MAP_TO_BITPOS(intId) \
+     (intId == Interrupt_SRCS_BITPOS_CORE0 ? (intId + DNUM) : intId)
+
 
 /*
  *************************************************************************
@@ -67,7 +73,13 @@ Int Interrupt_Module_startup(Int phase)
     volatile UInt32 *kick0 = (volatile UInt32 *)Interrupt_KICK0;
     volatile UInt32 *kick1 = (volatile UInt32 *)Interrupt_KICK1;
     UInt16 procId = MultiProc_self();
-    extern volatile cregister Uns DNUM;
+
+    /*
+     * If this assert fails, the MultiProc config has changed to break
+     * an assumption in Linux rpmsg driver, that HOST is listed first in
+     * MultiProc ID configuration.
+     */
+    Assert_isTrue(0 == MultiProc_getId("HOST"), NULL);
 
     /*
      *  Wait for Startup to be done (if MultiProc id not yet set) because a
@@ -117,6 +129,16 @@ Void Interrupt_intDisable(UInt16 remoteProcId, IInterrupt_IntInfo *intInfo)
     Hwi_disableInterrupt(intInfo->intVectorId);
 }
 
+Void Interrupt_intClearAll()
+{
+    volatile UInt32 *ipcgr = (volatile UInt32 *)Interrupt_IPCGR0;
+    volatile UInt32 *ipcar = (volatile UInt32 *)Interrupt_IPCAR0;
+    UInt val = ipcgr[DNUM]; /* Interrupt source bits */
+
+    ipcar[DNUM] = val;
+}
+
+
 /*
  *  ======== Interrupt_intRegister ========
  *  Register ISR for remote processor interrupt
@@ -124,27 +146,24 @@ Void Interrupt_intDisable(UInt16 remoteProcId, IInterrupt_IntInfo *intInfo)
 Void Interrupt_intRegister(UInt16 remoteProcId, IInterrupt_IntInfo *intInfo,
                            Fxn func, UArg arg)
 {
-    UInt i;
     Hwi_Params hwiAttrs;
     Interrupt_FxnTable *table;
 
-    /* setup the function table using the same Hwi int */
-    table = &(Interrupt_module->fxnTable[remoteProcId]);
+    UInt pos;
+    Assert_isTrue(intInfo != NULL, NULL);
+
+    pos = MAP_TO_BITPOS(intInfo->localIntId);
+
+    /* setup the function table with client function and arg to call: */
+    table = &(Interrupt_module->fxnTable[pos]);
     table->func = func;
-    if (remoteProcId != MultiProc_getId("HOST"))
-    {
-      /* arg not used for interrupts from Host.  The value in the IPCAR register
-        * will be used instead */
-      table->arg  = arg;
-    }
+    table->arg  = arg;
 
     /* Make sure the interrupt only gets plugged once */
     Interrupt_module->numPlugged++;
     if (Interrupt_module->numPlugged == 1) {
-        /* Clear any pending interrupt */
-        for (i = 0; i < MultiProc_getNumProcessors(); i++) {
-            Interrupt_intClear(i, NULL);
-        }
+        /* Clear all pending interrupts */
+        Interrupt_intClearAll();
 
         /* Register interrupt to remote processor */
         Hwi_Params_init(&hwiAttrs);
@@ -163,6 +182,9 @@ Void Interrupt_intUnregister(UInt16 remoteProcId, IInterrupt_IntInfo *intInfo)
 {
     Hwi_Handle hwiHandle;
     Interrupt_FxnTable *table;
+    UInt pos;
+
+    Assert_isTrue(intInfo != NULL, NULL);
 
     Interrupt_module->numPlugged--;
     if (Interrupt_module->numPlugged == 0) {
@@ -172,7 +194,9 @@ Void Interrupt_intUnregister(UInt16 remoteProcId, IInterrupt_IntInfo *intInfo)
     }
 
     /* Unset the function table */
-    table = &(Interrupt_module->fxnTable[remoteProcId]);
+    pos = MAP_TO_BITPOS(intInfo->localIntId);
+
+    table = &(Interrupt_module->fxnTable[pos]);
     table->func = NULL;
     table->arg  = 0;
 }
@@ -185,71 +209,94 @@ Void Interrupt_intSend(UInt16 remoteProcId, IInterrupt_IntInfo *intInfo,
                           UArg arg)
 {
     UInt32 val;
-    extern volatile cregister Uns DNUM;
     volatile UInt32 *ipcgr = (volatile UInt32 *)Interrupt_IPCGR0;
     volatile UInt32 *ipcgrh = (volatile UInt32 *)Interrupt_IPCGRH;
+    UInt pos;
 
-    Log_print2(Diags_USER1,
-        "Interrupt_intSend: Sending payload 0x%x to proc #%d",
-        (IArg)arg, (IArg)remoteProcId);
+    Assert_isTrue((intInfo != NULL), NULL);
+    pos = MAP_TO_BITPOS(intInfo->localIntId);
 
     /*
-     *  bit 0 is set to generate interrupt.
-     *  bits 4-7 is set to specify the interrupt generation source.
+     *  bit 0 is set to generate the interrupt.
+     *  bits 4-7 are set to specify the interrupt generation source.
      *  The convention is that bit 4 (SRCS0) is used for core 0,
      *  bit 5 (SRCS1) for core 1, etc... .
      */
-    val = (1 << (DNUM + Interrupt_SRCSx_SHIFT)) | 1;
+    val = (1 << pos) | 1;
+    Log_print2(Diags_USER1,
+        "Interrupt_intSend: setting SRCS to 0x%x to for procId #%d",
+        (IArg)val, (IArg)remoteProcId);
 
     if (remoteProcId == MultiProc_getId("HOST"))
     {
-      /* Interrupt is to be generated on the Host processor.  Go through
-       * IPCGRH register
-       */
-      /* TODO: Would like OR in arg as a payload, but Linux ipc driver
-       * currently would interpret those as source bits.
-       */
-      *ipcgrh = val;
+        /* Interrupt is to be generated on the Host processor.  Go through
+         * IPCGRH register
+         */
+        *ipcgrh = val;
     }
     else
     {
-      /* Interrupt is to be generated on another DSP. */
-      ipcgr[(remoteProcId-1)] =  val;
+        /* Interrupt is to be generated on another DSP. */
+        ipcgr[(remoteProcId-1)] =  val;
     }
 }
 
-#define IPCAR_INT_SRCS27     (0x80000000U)
 /*
  *  ======== Interrupt_intClear ========
  *  Acknowledge interrupt by clearing the corresponding source bit.
  *
- *  For interrupt from HOST, clear SRCC27 (bit 32), and return 1.
- *  Otherwise, clear SRCC0-3 depending on MultiProc ID.
+ *  intInfo->localIntId encodes the Source bit position to be cleared.
+ *  If this corresponds to Core0, adjust using remoteProcId to get true
+ *  SRCS bit position for the DSP core.
+ *
+ *  Only callers setting remoteProcId == HOST id care about return value.
  */
 UInt Interrupt_intClear(UInt16 remoteProcId, IInterrupt_IntInfo *intInfo)
 {
-    extern volatile cregister Uns DNUM;
     volatile UInt32 *ipcgr = (volatile UInt32 *)Interrupt_IPCGR0;
     volatile UInt32 *ipcar = (volatile UInt32 *)Interrupt_IPCAR0;
     UInt payload = Interrupt_INVALIDPAYLOAD;
-    UInt val = ipcgr[DNUM];
+    UInt val = ipcgr[DNUM]; /* Interrupt source bits */
+    UInt pos;
 
-    /* If interrupt originated at "HOST" clear signalling bits too */
-    if (remoteProcId == MultiProc_getId("HOST"))
-    {
-        if (val & IPCAR_INT_SRCS27) {
-            Log_print1(Diags_USER1, "Interrupt_intClear: ipcgr: 0x%x\n", val);
-            /* Clear bit: Must match keystone_remoteproc kick. */
-            ipcar[DNUM] = IPCAR_INT_SRCS27;
-            payload = val;
-        }
-    }
-    else if (val & (1 << ((remoteProcId-1)+ Interrupt_SRCSx_SHIFT))) {
-        ipcar[DNUM] =  (1 << ((remoteProcId-1)+ Interrupt_SRCSx_SHIFT));
-        payload = val;
+    Assert_isTrue((intInfo != NULL), NULL);
+    pos = MAP_TO_BITPOS(intInfo->localIntId);
+    ipcar[DNUM] = (1 << pos);
+
+    /*
+    Log_print2(Diags_USER1, "Interrupt_intClear: ipcgr: 0x%x, cleared: 0x%x\n",
+                            val, (1 << pos));
+    */
+
+    if (remoteProcId == MultiProc_getId("HOST")) {
+        payload = ((val & (UInt)(1 << Interrupt_SRCS_BITPOS_HOST)) ? val :
+                    Interrupt_INVALIDPAYLOAD);
     }
 
     return (payload);
+}
+
+/*
+ *  ======== Interrupt_checkAndClear ========
+ *  Return 1 if the interrupt was set (if so, we clear it);
+ *  Otherwise, returns 0.
+ */
+UInt Interrupt_checkAndClear(UInt16 remoteProcId, IInterrupt_IntInfo *intInfo)
+{
+    volatile UInt32 *ipcgr = (volatile UInt32 *)Interrupt_IPCGR0;
+    volatile UInt32 *ipcar = (volatile UInt32 *)Interrupt_IPCAR0;
+    UInt val = ipcgr[DNUM]; /* Interrupt source bits */
+    UInt pos;
+
+    Assert_isTrue((intInfo != NULL), NULL);
+
+    pos = MAP_TO_BITPOS(intInfo->localIntId);
+    if (val & (1 << pos)) {
+        ipcar[DNUM] = (1 << pos);
+        return(1);
+    }
+
+    return(0);
 }
 
 /*
@@ -259,25 +306,23 @@ Void Interrupt_isr(UArg arg)
 {
     Int i;
     Interrupt_FxnTable *table;
-    UArg ipcar;
-
-    ipcar = Interrupt_intClear(arg, NULL);
+    volatile UInt32 *ipcgr = (volatile UInt32 *)Interrupt_IPCGR0;
+    volatile UInt32 *ipcar = (volatile UInt32 *)Interrupt_IPCAR0;
+    UInt val = ipcgr[DNUM]; /* Interrupt source bits */
 
     Log_print1(Diags_USER1,
-        "InterruptDsp_isr: Interrupt received, payload = 0x%x", (IArg)ipcar);
+        "Interrupt_isr: Interrupt(s) received: 0x%x", (IArg)val);
 
-    for (i = 0; i < MultiProc_getNumProcessors(); i++) {
+    for (i = Interrupt_SRCS_BITPOS_CORE0; i < 32; i++) {
+        if (val & (1 << i)) {
+            /* Clear the specific interrupt: */
+            ipcar[DNUM] = (1 << i);
 
-        table = &(Interrupt_module->fxnTable[i]);
-        if (table->func != NULL) {
-
-            Log_print1(Diags_USER1,
-                "InterruptDsp_isr: calling isr func for proc: %d", i);
-
-            if (i == MultiProc_getId("HOST")) {
-                (table->func)(ipcar);
-            }
-            else {
+            /* Call the client function: */
+            table = &(Interrupt_module->fxnTable[i]);
+            if (table->func != NULL) {
+                Log_print1(Diags_USER1,
+                    "InterruptDsp_isr: source id bit: %d", i);
                 (table->func)(table->arg);
             }
         }

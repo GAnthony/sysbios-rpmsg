@@ -45,6 +45,7 @@ Pkg.attrs.exportSrc = true;
 
 Pkg.otherFiles = ["package.bld"];
 
+//var SRCS = ["Interrupt.c", "VirtQueue.c", "NotifySetup.c"];
 var SRCS = ["Interrupt.c", "VirtQueue.c"];
 
 /* remove this output directory during a clean */

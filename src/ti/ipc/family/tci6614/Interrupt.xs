@@ -43,6 +43,7 @@ var deviceSettings = {
         KICK0:          0x02620038,
         KICK1:          0x0262003C,
         INTERDSPINT:    90,
+        DSPINT:         5,
     },
 }
 var Settings = xdc.loadCapsule('ti/sdo/ipc/family/Settings.xs');
@@ -70,6 +71,7 @@ function module$meta$init()
     this.KICK0          = settings.KICK0;
     this.KICK1          = settings.KICK1;
     this.INTERDSPINT    = settings.INTERDSPINT;
+    this.DSPINT         = settings.DSPINT;
 }
 /*
  *  ======== module$use ========
@@ -88,10 +90,9 @@ function module$use()
 function module$static$init(mod, params)
 {
     var fxnTable = Interrupt.$object.fxnTable;
-    var MultiProc = xdc.module('ti.sdo.utils.MultiProc');
 
-    /* The function table length should be the number of processors */
-    fxnTable.length = MultiProc.numProcessors;
+    /* The function table length should be the number of IPCAR bits */
+    fxnTable.length = 32;
     for (var i = 0; i < fxnTable.length; i++) {
         fxnTable[i].func = null;
         fxnTable[i].arg = 0;
