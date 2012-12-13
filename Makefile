@@ -34,9 +34,9 @@
 REPO            = /db/atree/gp/repo
 
 # Edit Dependency Versions:
-XDCROOTVER      = xdctools_3_23_02_47
-BIOSPRODVER	= bios_6_32_05_54
-IPCPRODVER	= ipc_1_24_00_16
+XDCROOTVER      = xdctools_3_24_01_29
+BIOSPRODVER	= bios_6_34_01_14
+IPCPRODVER	= ipc_1_25_01_09
 
 BIOSPROD	= $(REPO)/$(BIOSPRODVER)
 IPCPROD		= $(REPO)/$(IPCPRODVER)
