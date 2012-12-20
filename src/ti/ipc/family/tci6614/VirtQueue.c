@@ -125,9 +125,9 @@ Void VirtQueue_init()
     extern cregister volatile UInt DNUM;
     UInt16 procId;
 
-    /* Skip if the procId has already been set */
+    /* Abort if the procId has already been set.  We must set it! */
     if (MultiProc_self() != MultiProc_INVALIDID) {
-        Log_print0(Diags_USER1, "VirtQueue_init(): MultiProc_self not set!\n");
+        System_abort("VirtQueue_init(): MultiProc_self already set!");
         return;
     }
 
