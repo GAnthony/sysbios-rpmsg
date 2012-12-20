@@ -106,9 +106,11 @@ struct resource resources[] = {
     /*
      * Virtio entries must come first.
      */
+#ifndef TRACE_RESOURCE_ONLY
     {TYPE_VIRTIO_DEV,0,IPU_C0_FEATURES,0,0,0,0,VIRTIO_ID_RPMSG,0,0,0,0,"vdev:rpmsg"},
     {TYPE_VRING, 0, VRING0_DA, 0, 0, 0,VQ0_SIZE,0,0,0,0,0,"vring:dsp->arm"},
     {TYPE_VRING, 1, VRING1_DA, 0, 0, 0,VQ1_SIZE,0,0,0,0,0,"vring:mpu->dsp"},
+#endif
     {TYPE_TRACE, 0, TRACEBUFADDR,0,0,0, TRACEBUFSIZE, 0,0,0,0,0,"trace:dsp"},
 };
 
