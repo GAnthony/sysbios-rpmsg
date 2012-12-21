@@ -28,17 +28,31 @@
  * WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR
  * OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE,
  * EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
- */
+ * */
 /*
- *  ======== package.xdc ========
+ *  ======== NotifySetup.xdc ========
  *
  */
 
 /*!
- *  ======== ti.ipc.family.tci6614 ========
+ *  ======== NotifySetup ========
+ *  Manages setup of the default Notify driver handles
+ *
+ *  Creates the default notify drivers for each pair of processors.
  */
-package ti.ipc.family.tci6614[1,0,0,0] {
-    module    Interrupt;
-    module    VirtQueue;
-    module    NotifySetup;
+module NotifySetup inherits ti.sdo.ipc.interfaces.INotifySetup
+{
+    /* The interrupt vector id */
+    config UInt dspIntVectId = 5;
+
+internal:
+
+    /*! Source ID bit position for CORE0 */
+    const UInt SRCS_BITPOS_CORE0 = 4;
+
+    /*! Source ID bit position for HOST */
+    const UInt SRCS_BITPOS_HOST = 31;
 }
+/*
+ *  @(#) ti.sdo.ipc.family.c647x; 1, 0, 0, 0,4; 10-19-2011 10:45:48; /db/vtree/library/trees/ipc/ipc.git/src/ null
+ */

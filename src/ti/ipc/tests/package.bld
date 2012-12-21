@@ -55,15 +55,28 @@ for (var i = 0; i < Build.targets.length; i++) {
     for (var j = 0; j < targ.platforms.length; j++) {
         var platform = targ.platforms[j];
 
-//        print("  platform:  " + platform);
+        // print("  platform:  " + platform);
         // name = bin/platform/name.x+suffix
         var name = "bin/" +
                 // replace all ':' and '.' with '_' in platform name
                 platform.replace(/\:/g, "_").replace(/\./g, "_");
 
-        Pkg.addExecutable(name + "/remoteproc_example", targ, platform, {
-            cfgScript: "remoteproc_example",
-        }).addObjects(["remoteproc_example.c"]);
+	if (platform.match(/^ti\.platforms\.evm6614\:DSP/)) {
+
+		Pkg.addExecutable(name + "/messageq_multicore",targ,platform, {
+		    cfgScript: "messageq_multicore",
+                    defs: "-D TCI6614"
+		}).addObjects(["messageq_multicore.c"]);
+
+		Pkg.addExecutable(name + "/dual_transports",targ,platform, {
+		    cfgScript: "dual_transports",
+                    defs: "-D TCI6614"
+		}).addObjects(["dual_transports.c"]);
+
+		Pkg.addExecutable(name + "/remoteproc_example",targ,platform, {
+		    cfgScript: "remoteproc_example",
+		}).addObjects(["remoteproc_example.c"]);
+	}
 
         Pkg.addExecutable(name + "/messageq_multi", targ, platform, {
             cfgScript: "messageq_common",

@@ -28,17 +28,28 @@
  * WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR
  * OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE,
  * EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
- */
+ * */
 /*
- *  ======== package.xdc ========
+ *  ======== NotifySetup.xs ========
  *
  */
 
-/*!
- *  ======== ti.ipc.family.tci6614 ========
+var NotifySetup  = null;
+var MultiProc    = null;
+var Notify       = null;
+var NotifyDriverShm = null;
+
+/*
+ *  ======== module$use ========
  */
-package ti.ipc.family.tci6614[1,0,0,0] {
-    module    Interrupt;
-    module    VirtQueue;
-    module    NotifySetup;
+function module$use()
+{
+    NotifySetup = this;
+    NotifyDriverShm = xdc.useModule('ti.sdo.ipc.notifyDrivers.NotifyDriverShm');
+    Notify = xdc.useModule('ti.sdo.ipc.Notify');
+    MultiProc = xdc.useModule('ti.sdo.utils.MultiProc');
 }
+
+/*
+ *  @(#) ti.sdo.ipc.family.c647x; 1, 0, 0, 0,4; 10-19-2011 10:45:48; /db/vtree/library/trees/ipc/ipc.git/src/ null
+ */

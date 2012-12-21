@@ -58,7 +58,15 @@ Void Interrupt_isr(UArg arg);
 #define MAP_TO_BITPOS(intId) \
      (intId == Interrupt_SRCS_BITPOS_CORE0 ? (intId + DNUM) : intId)
 
+/*
+ * Map remoteProcId to CORE ID [0-3]
+ * NOTE: This assumes that HOST is at MultiProcId == 0, and CORE0 at 1i
+ */
+#define MAP_RPROCID_TO_COREID(rProcId)     (rProcId-1)
 
+#define MAP_RPROCID_TO_SRCC(rProcId, intId) \
+         (intId == Interrupt_SRCS_BITPOS_CORE0 ?  \
+         (intId + (rProcId-1)) : intId)
 /*
  *************************************************************************
  *                      Module functions
@@ -152,7 +160,10 @@ Void Interrupt_intRegister(UInt16 remoteProcId, IInterrupt_IntInfo *intInfo,
     UInt pos;
     Assert_isTrue(intInfo != NULL, NULL);
 
-    pos = MAP_TO_BITPOS(intInfo->localIntId);
+    pos = MAP_RPROCID_TO_SRCC(remoteProcId, intInfo->localIntId);
+
+    Log_print2(Diags_USER1, "Interrupt_intRegister: pos: %d, func: 0x%x\n",
+              (IArg)pos, (IArg)func);
 
     /* setup the function table with client function and arg to call: */
     table = &(Interrupt_module->fxnTable[pos]);
@@ -194,7 +205,7 @@ Void Interrupt_intUnregister(UInt16 remoteProcId, IInterrupt_IntInfo *intInfo)
     }
 
     /* Unset the function table */
-    pos = MAP_TO_BITPOS(intInfo->localIntId);
+    pos = MAP_RPROCID_TO_SRCC(remoteProcId, intInfo->localIntId);
 
     table = &(Interrupt_module->fxnTable[pos]);
     table->func = NULL;
@@ -203,7 +214,9 @@ Void Interrupt_intUnregister(UInt16 remoteProcId, IInterrupt_IntInfo *intInfo)
 
 /*!
  *  ======== Interrupt_intSend ========
- *  Send interrupt to the remote processor
+ *  Send interrupt to the remote processor, identifying this core as source.
+ *  If CORE0 BIT POS, we add DNUM to identify this core as the source;
+ *  Otherwise, we just use the localIntId as the source bit position.
  */
 Void Interrupt_intSend(UInt16 remoteProcId, IInterrupt_IntInfo *intInfo,
                           UArg arg)
@@ -223,9 +236,9 @@ Void Interrupt_intSend(UInt16 remoteProcId, IInterrupt_IntInfo *intInfo,
      *  bit 5 (SRCS1) for core 1, etc... .
      */
     val = (1 << pos) | 1;
-    Log_print2(Diags_USER1,
-        "Interrupt_intSend: setting SRCS to 0x%x to for procId #%d",
-        (IArg)val, (IArg)remoteProcId);
+    Log_print3(Diags_USER1,
+        "Interrupt_intSend: setting bit %d in SRCS as 0x%x to for rprocId #%d",
+        (IArg)pos, (IArg)val, (IArg)remoteProcId);
 
     if (remoteProcId == MultiProc_getId("HOST"))
     {
@@ -237,7 +250,7 @@ Void Interrupt_intSend(UInt16 remoteProcId, IInterrupt_IntInfo *intInfo,
     else
     {
         /* Interrupt is to be generated on another DSP. */
-        ipcgr[(remoteProcId-1)] =  val;
+        ipcgr[MAP_RPROCID_TO_COREID(remoteProcId)] =  val;
     }
 }
 
@@ -248,6 +261,8 @@ Void Interrupt_intSend(UInt16 remoteProcId, IInterrupt_IntInfo *intInfo,
  *  intInfo->localIntId encodes the Source bit position to be cleared.
  *  If this corresponds to Core0, adjust using remoteProcId to get true
  *  SRCS bit position for the DSP core.
+ *
+ *  Otherwise, the localIntId is used directly as the bit position.
  *
  *  Only callers setting remoteProcId == HOST id care about return value.
  */
@@ -260,7 +275,7 @@ UInt Interrupt_intClear(UInt16 remoteProcId, IInterrupt_IntInfo *intInfo)
     UInt pos;
 
     Assert_isTrue((intInfo != NULL), NULL);
-    pos = MAP_TO_BITPOS(intInfo->localIntId);
+    pos = MAP_RPROCID_TO_SRCC(remoteProcId, intInfo->localIntId);
     ipcar[DNUM] = (1 << pos);
 
     /*

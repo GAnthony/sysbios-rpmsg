@@ -30,4 +30,5 @@ src/ti/ipc/family/omapl138/VirtQueue.h
 src/ti/ipc/family/tci6614/VirtQueue.h
 src/ti/ipc/family/tci6614/Interrupt.h
 src/ti/ipc/namesrv/NameServerRemoteRpmsg.h
+src/ti/ipc/family/tci6614/NotifySetup.h
 src/ti/resources/IpcMemory.h
