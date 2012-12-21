@@ -171,7 +171,7 @@ Int NameServerRemoteRpmsg_get(NameServerRemoteRpmsg_Object *obj,
 
     /* Check that host NameServer is alive to avoid pinging the host: */
     if (NameServerRemoteRpmsg_module->nsPort == NAME_SERVER_PORT_INVALID) {
-        status = NameServer_E_RESOURCE;
+        status = NameServer_E_NOTFOUND;
         goto exit;
     }
 
