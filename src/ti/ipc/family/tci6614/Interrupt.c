@@ -278,10 +278,8 @@ UInt Interrupt_intClear(UInt16 remoteProcId, IInterrupt_IntInfo *intInfo)
     pos = MAP_RPROCID_TO_SRCC(remoteProcId, intInfo->localIntId);
     ipcar[DNUM] = (1 << pos);
 
-    /*
     Log_print2(Diags_USER1, "Interrupt_intClear: ipcgr: 0x%x, cleared: 0x%x\n",
                             val, (1 << pos));
-    */
 
     if (remoteProcId == MultiProc_getId("HOST")) {
         payload = ((val & (UInt)(1 << Interrupt_SRCS_BITPOS_HOST)) ? val :
@@ -337,7 +335,7 @@ Void Interrupt_isr(UArg arg)
             table = &(Interrupt_module->fxnTable[i]);
             if (table->func != NULL) {
                 Log_print1(Diags_USER1,
-                    "InterruptDsp_isr: source id bit: %d", i);
+                    "Interrupt_isr: source id bit: %d", i);
                 (table->func)(table->arg);
             }
         }
