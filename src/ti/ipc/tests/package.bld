@@ -86,6 +86,7 @@ for (var i = 0; i < Build.targets.length; i++) {
         Pkg.addExecutable(name + "/messageq_single", targ, platform, {
             cfgScript: "messageq_common",
             defs: "-D BENCHMARK -D TCI6614"
+//            defs: "-D BENCHMARK -D TCI6614_v36"
         }).addObjects(["messageq_single.c"]);
 
 /*
