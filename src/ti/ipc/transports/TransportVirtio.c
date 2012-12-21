@@ -330,7 +330,7 @@ Int TransportVirtio_Instance_init(TransportVirtio_Object *obj,
 #endif
     }
 
-    /* Plug Vring Interrupts, and wait for host read to recv kick: */
+    /* Plug Vring Interrupts, and wait for host ready to recv kick: */
     VirtQueue_startup(remoteProcId, obj->isHost);
 
     /* Announce our "MessageQ" service to other side: */
