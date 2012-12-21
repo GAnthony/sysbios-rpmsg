@@ -66,7 +66,7 @@
 #include <xdc/cfg/global.h>
 
 /* Define this to eliminate VIRTIO DEV and VRINGS from rsc_table: */
-#define TRACE_RESOURCE_ONLY 1
+//#define TRACE_RESOURCE_ONLY 1
 #include "rsc_table_tci6614.h"
 
 #define HEAP_NAME   "myHeapBuf"
@@ -97,17 +97,6 @@ Void tsk0_func(UArg arg0, UArg arg1)
     HeapBufMP_Params              heapBufParams;
 
     System_printf("tsk0_func: Entered...\n");
-
-    /*
-     *  Ipc_start() calls Ipc_attach() to synchronize all remote processors
-     *  if 'Ipc.procSync' is set to 'Ipc.ProcSync_ALL' in *.cfg
-     *  HOST is skipped, thanks to overriding NotifySetup_numIntLines().
-     */
-    status = Ipc_start();
-    if (status < 0) {
-        System_abort("Ipc_start failed\n");
-    }
-    System_printf("Ipc_start succeeded: %d\n", status);
 
     if (MultiProc_self() == MultiProc_getId("CORE0")) {
         /*
@@ -258,18 +247,31 @@ Void traceBuf_cacheWb()
  */
 Int main(Int argc, Char* argv[])
 {
+    Int status;
 
     /* Put breakpoint for CORE0 */
+#if 0
     if (DNUM == 0) {
        /* Wait until we connect CCS; write 1 to var spin to continue: */
        volatile int spin = 1;
        while(spin);
     }
+#endif
 
     /* Reference resource table, until IpcMemory.xdt is enabled for TCI6614 */
     System_printf("Resource Table: 0x%lx\n", resources);
-
     System_printf("main: MultiProc id: %d\n", MultiProc_self());
+
+    /*
+     *  Ipc_start() calls Ipc_attach() to synchronize all remote processors
+     *  if 'Ipc.procSync' is set to 'Ipc.ProcSync_ALL' in *.cfg
+     *  HOST is skipped, thanks to overriding NotifySetup_numIntLines().
+     */
+    status = Ipc_start();
+    if (status < 0) {
+        System_abort("Ipc_start failed\n");
+    }
+    System_printf("Ipc_start succeeded: %d\n", status);
 
     nextProcId = (MultiProc_self() + 1) % MultiProc_getNumProcessors();
     if (nextProcId == MultiProc_getId("HOST")) {
@@ -280,7 +282,6 @@ Int main(Int argc, Char* argv[])
     /* Generate queue names based on own proc ID and total number of procs */
     System_sprintf(localQueueName, "%s", MultiProc_getName(MultiProc_self()));
     System_sprintf(nextQueueName, "%s",  MultiProc_getName(nextProcId));
-
 
     BIOS_start();
 
