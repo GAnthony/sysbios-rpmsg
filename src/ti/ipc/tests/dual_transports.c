@@ -30,16 +30,16 @@
  * EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  * */
 /*
- *  ======== message_multicore.c ========
- *  Multiprocessor MessageQ example
+ *  ======== dual_transports.c ========
+ *  Multiprocessor MessageQ example, demonstrating TransportVirtio and
+ *  TransportShm coexistence.
  *
- *  This is an example program that uses MessageQ to pass a message
- *  from one processor to another.
+ *  Task1 uses MessageQ to pass a message in a ring between DSP CORES.
  *
- *  Each processor creates its own MessageQ first and then will try to open
- *  a remote processor's MessageQ.
+ *  Task2 responds the the Host MessageQApp or MessageQBench.
  *
- *  See message_multicore.k file for expected output.
+ *  A semaphore synchronizes Task1 to wait until Task2 starts it, which
+ *  is initiated by a sync message from the host.
  */
 
 #include <xdc/std.h>
@@ -60,33 +60,121 @@
 #include <ti/sysbios/BIOS.h>
 #include <ti/sysbios/knl/Task.h>
 #include <ti/sysbios/knl/Clock.h>
+#include <ti/sysbios/knl/Semaphore.h>
 #include <ti/sysbios/family/c66/Cache.h>
 
 /*  ----------------------------------- To get globals from .cfg Header */
 #include <xdc/cfg/global.h>
 
-/* Define this to eliminate VIRTIO DEV and VRINGS from rsc_table: */
-//#define TRACE_RESOURCE_ONLY 1
 #include "rsc_table_tci6614.h"
 
+/* Used by multicoreMsgqFxn: */
 #define HEAP_NAME   "myHeapBuf"
 #define HEAPID      1
 #define NUMLOOPS    10
 
-Char localQueueName[10];
-Char nextQueueName[10];
-UInt16 nextProcId;
+/* Used by hostMsgqFxn: */
+#define SLAVE_MESSAGEQNAME "SLAVE"
+#define MessageQ_payload(m) ((void *)((char *)(m) + sizeof(MessageQ_MsgHeader)))
 
 extern volatile cregister Uns DNUM;
 
 /*
- *  ======== tsk0_func ========
+ *  ======== hostMsgqFxn ========
+ *  Receive and return messages to HOST.
+ *
+ *  When sync received from host, signal multicoreMesgqFxn to proceed.
+ */
+Void hostMsgqFxn(UArg arg0, UArg arg1)
+{
+    MessageQ_Msg msg;
+    MessageQ_Handle  messageQ;
+    MessageQ_QueueId remoteQueueId;
+    Char             localQueueName[64];
+    UInt16 procId;
+    Int status;
+    UInt16 msgId;
+    UInt32 start;
+    UInt32 end;
+    Uint32 numLoops;
+    UInt32 print;
+    UInt32 *params;
+
+    /* Construct a MessageQ name adorned with core name: */
+    System_sprintf(localQueueName, "%s_%s", SLAVE_MESSAGEQNAME,
+                   MultiProc_getName(MultiProc_self()));
+
+    messageQ = MessageQ_create(localQueueName, NULL);
+    if (messageQ == NULL) {
+        System_abort("MessageQ_create failed\n" );
+    }
+
+    System_printf("hostMsgqFxn: created MessageQ: %s; QueueID: 0x%x\n",
+        localQueueName, MessageQ_getQueueId(messageQ));
+
+    while (1) {
+        /* handshake with host to get starting parameters */
+        System_printf("Awaiting sync message from host...\n");
+        MessageQ_get(messageQ, &msg, MessageQ_FOREVER);
+
+        params = MessageQ_payload(msg);
+        numLoops = params[0];
+        print = params[1];
+
+        remoteQueueId = MessageQ_getReplyQueue(msg);
+        procId = MessageQ_getProcId(remoteQueueId);
+
+        System_printf("Received msg from (procId:remoteQueueId): 0x%x:0x%x\n"
+            "\tpayload: %d bytes; loops: %d %s printing.\n",
+            procId, remoteQueueId,
+            (MessageQ_getMsgSize(msg) - sizeof(MessageQ_MsgHeader)),
+            numLoops, print ? "with" : "without");
+
+        MessageQ_put(remoteQueueId, msg);
+
+        /* ==> If CORE0, Kick multicoreMsgqFxn to start running */
+        if (DNUM == 0) {
+            Semaphore_post(semStartMultiCoreTest);
+        }
+
+        start = Clock_getTicks();
+        for (msgId = 0; msgId < numLoops; msgId++) {
+            status = MessageQ_get(messageQ, &msg, MessageQ_FOREVER);
+            Assert_isTrue(status == MessageQ_S_SUCCESS, NULL);
+
+            if (print) {
+                System_printf("Got msg #%d (%d bytes) from procId %d\n",
+                    MessageQ_getMsgId(msg), MessageQ_getMsgSize(msg), procId);
+            }
+
+            Assert_isTrue(MessageQ_getMsgId(msg) == msgId, NULL);
+
+            if (print) {
+                System_printf("Sending msg Id #%d to procId %d\n", msgId,
+                              procId);
+            }
+
+            status = MessageQ_put(remoteQueueId, msg);
+            Assert_isTrue(status == MessageQ_S_SUCCESS, NULL);
+        }
+        end = Clock_getTicks();
+
+        if (!print) {
+            System_printf("%d iterations took %d ticks or %d usecs/msg\n",
+                          numLoops,
+            end - start, ((end - start) * Clock_tickPeriod) / numLoops);
+        }
+    }
+}
+
+/*
+ *  ======== multicoreFxn ========
  *  Allocates a message and ping-pongs the message around the processors.
  *  A local message queue is created and a remote message queue is opened.
  *  Messages are sent to the remote message queue and retrieved from the
  *  local MessageQ.
  */
-Void tsk0_func(UArg arg0, UArg arg1)
+Void multicoreFxn(UArg arg0, UArg arg1)
 {
     MessageQ_Msg     msg;
     MessageQ_Handle  messageQ;
@@ -95,14 +183,27 @@ Void tsk0_func(UArg arg0, UArg arg1)
     UInt16           msgId = 0;
     HeapBufMP_Handle              heapHandle;
     HeapBufMP_Params              heapBufParams;
+    Char localQueueName[10];
+    Char nextQueueName[10];
+    UInt16 nextProcId;
 
-    System_printf("tsk0_func: Entered...\n");
+    System_printf("multicoreFxn: Entered...\n");
+
+    nextProcId = (MultiProc_self() + 1) % MultiProc_getNumProcessors();
+    if (nextProcId == MultiProc_getId("HOST")) {
+	Assert_isTrue(MultiProc_getId("HOST") == 0, NULL);
+        nextProcId = 1;  /* Skip the host */
+    }
+
+    /* Generate queue names based on own proc ID and total number of procs */
+    System_sprintf(localQueueName, "%s", MultiProc_getName(MultiProc_self()));
+    System_sprintf(nextQueueName, "%s",  MultiProc_getName(nextProcId));
 
     if (MultiProc_self() == MultiProc_getId("CORE0")) {
         /*
          *  Create the heap that will be used to allocate messages.
          */
-        System_printf("tsk0_func: Creating HeapBufMP...\n");
+        System_printf("multicoreFxn: Creating HeapBufMP...\n");
         HeapBufMP_Params_init(&heapBufParams);
         heapBufParams.regionId       = 0;
         heapBufParams.name           = HEAP_NAME;
@@ -114,7 +215,7 @@ Void tsk0_func(UArg arg0, UArg arg1)
         }
     }
     else {
-        System_printf("tsk0_func: Opening HeapBufMP...\n");
+        System_printf("multicoreFxn: Opening HeapBufMP...\n");
         /* Open the heap created by the other processor. Loop until opened. */
         do {
             status = HeapBufMP_open(HEAP_NAME, &heapHandle);
@@ -138,7 +239,7 @@ Void tsk0_func(UArg arg0, UArg arg1)
     }
 
     /* Open the remote message queue. Spin until it is ready. */
-    System_printf("tsk0_func: Opening Remote Queue: %s...\n", nextQueueName);
+    System_printf("multicoreFxn: Opening Remote Queue: %s...\n", nextQueueName);
     do {
         status = MessageQ_open(nextQueueName, &remoteQueueId);
         /*
@@ -157,19 +258,25 @@ Void tsk0_func(UArg arg0, UArg arg1)
            System_abort("MessageQ_alloc failed\n" );
         }
 
+        while (1) {
+
+        /* ==> If CORE0, wait for signal from hostMsgqFxn to start loop: */
+        if (DNUM == 0) {
+            Semaphore_pend(semStartMultiCoreTest, BIOS_WAIT_FOREVER);
+        }
+
         /*
          *  Send the message to the next processor and wait for a message
          *  from the previous processor.
          */
-        System_printf("tsk0_func: Sender: Start the main loop\n");
-        while (msgId < NUMLOOPS) {
+        System_printf("multicoreFxn: Sender: Start the main loop\n");
+        for (msgId = 0; msgId < NUMLOOPS; msgId++) {
             /* Increment...the remote side will check this */
-            msgId++;
             MessageQ_setMsgId(msg, msgId);
 
-            System_printf("Sending a message #%d to %s\n", msgId, nextQueueName);
+            System_printf("Sending message #%d to %s\n", msgId, nextQueueName);
 
-            /* send the message to the remote processor */
+            /* send the message to the next processor */
             status = MessageQ_put(remoteQueueId, msg);
             if (status < 0) {
                System_abort("MessageQ_put had a failure/error\n");
@@ -178,16 +285,18 @@ Void tsk0_func(UArg arg0, UArg arg1)
             /* Get a message */
             status = MessageQ_get(messageQ, &msg, MessageQ_FOREVER);
             if (status < 0) {
-               System_abort("This should not happen since timeout is forever\n");
+               System_abort("This should not happen as timeout is forever\n");
             }
+        }
         }
     }
     else {
+
         /*
          *  Wait for a message from the previous processor and
          *  send it to the next processor
          */
-        System_printf("tsk0_func: Receiver: Start the main loop\n");
+        System_printf("multicoreFxn: Receiver: Start the main loop\n");
         while (TRUE) {
             /* Get a message */
             status = MessageQ_get(messageQ, &msg, MessageQ_FOREVER);
@@ -195,11 +304,11 @@ Void tsk0_func(UArg arg0, UArg arg1)
                System_abort("This should not happen since timeout is forever\n");
             }
 
-            System_printf("Sending a message #%d to %s\n", MessageQ_getMsgId(msg),
-                nextQueueName);
-
             /* Get the message id */
             msgId = MessageQ_getMsgId(msg);
+
+            System_printf("Sending a message #%d to %s\n", msgId,
+                nextQueueName);
 
             /* send the message to the remote processor */
             status = MessageQ_put(remoteQueueId, msg);
@@ -209,36 +318,10 @@ Void tsk0_func(UArg arg0, UArg arg1)
 
             /* test done */
             if (msgId >= NUMLOOPS) {
-                break;
+                System_printf("multicore loop test is complete\n");
             }
         }
     }
-
-    System_printf("The test is complete\n");
-    BIOS_exit(0);
-}
-
-#define CACHE_WB_TICK_PERIOD    5
-
-/*
- * ======== traceBuf_cacheWb ========
- *
- * Used for flushing SysMin trace buffer.
- */
-Void traceBuf_cacheWb()
-{
-    static UInt32 oldticks = 0;
-    UInt32 newticks;
-
-    newticks = Clock_getTicks();
-    if (newticks - oldticks < (UInt32)CACHE_WB_TICK_PERIOD) {
-        /* Don't keep flushing cache */
-        return;
-    }
-
-    oldticks = newticks;
-
-    Cache_wbAll();
 }
 
 /*
@@ -249,7 +332,7 @@ Int main(Int argc, Char* argv[])
 {
     Int status;
 
-    /* Put breakpoint for CORE0 */
+    /* Put CCS breakpoint for CORE0 */
 #if 0
     if (DNUM == 0) {
        /* Wait until we connect CCS; write 1 to var spin to continue: */
@@ -273,15 +356,8 @@ Int main(Int argc, Char* argv[])
     }
     System_printf("Ipc_start succeeded: %d\n", status);
 
-    nextProcId = (MultiProc_self() + 1) % MultiProc_getNumProcessors();
-    if (nextProcId == MultiProc_getId("HOST")) {
-	Assert_isTrue(MultiProc_getId("HOST") == 0, NULL);
-        nextProcId = 1;  /* Skip the host */
-    }
-
-    /* Generate queue names based on own proc ID and total number of procs */
-    System_sprintf(localQueueName, "%s", MultiProc_getName(MultiProc_self()));
-    System_sprintf(nextQueueName, "%s",  MultiProc_getName(nextProcId));
+    Task_create(multicoreFxn, NULL, NULL);
+    Task_create(hostMsgqFxn, NULL, NULL);
 
     BIOS_start();
 
