@@ -70,7 +70,8 @@ for (var i = 0; i < Build.targets.length; i++) {
 
 		Pkg.addExecutable(name + "/dual_transports",targ,platform, {
 		    cfgScript: "dual_transports",
-                    defs: "-D TCI6614"
+//                    defs: "-D TCI6614"  // Commented out for v3.6 testing
+                    defs: "-D TCI6614_v36"
 		}).addObjects(["dual_transports.c"]);
 
 		Pkg.addExecutable(name + "/remoteproc_example",targ,platform, {
@@ -85,8 +86,8 @@ for (var i = 0; i < Build.targets.length; i++) {
 
         Pkg.addExecutable(name + "/messageq_single", targ, platform, {
             cfgScript: "messageq_common",
-            defs: "-D BENCHMARK -D TCI6614"
-//            defs: "-D BENCHMARK -D TCI6614_v36"
+//            defs: "-D BENCHMARK -D TCI6614" // Commented out for v3.6 test.
+            defs: "-D BENCHMARK -D TCI6614_v36"
         }).addObjects(["messageq_single.c"]);
 
 /*

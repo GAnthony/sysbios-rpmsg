@@ -66,7 +66,11 @@
 /*  ----------------------------------- To get globals from .cfg Header */
 #include <xdc/cfg/global.h>
 
+#if defined(TCI6614_v36)
+#include "rsc_table_tci6614_v3.6.h"
+#else
 #include "rsc_table_tci6614.h"
+#endif
 
 /* Used by multicoreMsgqFxn: */
 #define HEAP_NAME   "myHeapBuf"
@@ -341,8 +345,14 @@ Int main(Int argc, Char* argv[])
     }
 #endif
 
+#if defined (TCI6614_v36)
+    System_printf("%d Resource Table entries at 0x%x\n",
+                  ti_resources_ResourceTable.num, &ti_resources_ResourceTable);
+
+#else
     /* Reference resource table, until IpcMemory.xdt is enabled for TCI6614 */
     System_printf("Resource Table: 0x%lx\n", resources);
+#endif
     System_printf("main: MultiProc id: %d\n", MultiProc_self());
 
     /*
