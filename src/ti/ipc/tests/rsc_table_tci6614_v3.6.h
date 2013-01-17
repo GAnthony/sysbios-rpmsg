@@ -61,18 +61,18 @@
 #define RPMSG_VQ1_SIZE          256
 
 struct resource_table {
-	UInt32 version;
-	UInt32 num;
-	UInt32 reserved[2];
-	UInt32 offset[13];
+    UInt32 version;
+    UInt32 num;
+    UInt32 reserved[2];
+    UInt32 offset[13];
 
-	/* rpmsg vdev entry */
-	struct fw_rsc_vdev rpmsg_vdev;
-	struct fw_rsc_vdev_vring rpmsg_vring0;
-	struct fw_rsc_vdev_vring rpmsg_vring1;
+    /* rpmsg vdev entry */
+    struct fw_rsc_vdev rpmsg_vdev;
+    struct fw_rsc_vdev_vring rpmsg_vring0;
+    struct fw_rsc_vdev_vring rpmsg_vring1;
 
-	/* trace entry */
-	struct fw_rsc_trace trace;
+    /* trace entry */
+    struct fw_rsc_trace trace;
 };
 
 /* Add trace buffer information to the resource table */
@@ -84,28 +84,28 @@ extern char * xdc_runtime_SysMin_Module_State_0_outbuf__A;
 #pragma DATA_ALIGN(ti_resources_ResourceTable, 4096)
 
 struct resource_table ti_resources_ResourceTable = {
-	1, /* we're the first version that implements this */
-	2, /* number of entries in the table */
-	0, 0, /* reserved, must be zero */
-	/* offsets to entries */
-	{
-		offsetof(struct resource_table, rpmsg_vdev),
-		offsetof(struct resource_table, trace),
-	},
+    1, /* we're the first version that implements this */
+    2, /* number of entries in the table */
+    0, 0, /* reserved, must be zero */
+    /* offsets to entries */
+    {
+        offsetof(struct resource_table, rpmsg_vdev),
+        offsetof(struct resource_table, trace),
+    },
 
-	/* rpmsg vdev entry */
-	{
-		TYPE_VDEV, VIRTIO_ID_RPMSG, 0,
-		RPMSG_IPU_C0_FEATURES, 0, 0, 0, 2, { 0, 0 },
-		/* no config data */
-	},
-	/* the two vrings */
-	{ RPMSG_VRING0_DA, 4096, RPMSG_VQ0_SIZE, 1, 0 },
-	{ RPMSG_VRING1_DA, 4096, RPMSG_VQ1_SIZE, 2, 0 },
+    /* rpmsg vdev entry */
+    {
+        TYPE_VDEV, VIRTIO_ID_RPMSG, 0,
+        RPMSG_IPU_C0_FEATURES, 0, 0, 0, 2, { 0, 0 },
+/* no config data */
+    },
+    /* the two vrings */
+    { RPMSG_VRING0_DA, 4096, RPMSG_VQ0_SIZE, 1, 0 },
+    { RPMSG_VRING1_DA, 4096, RPMSG_VQ1_SIZE, 2, 0 },
 
-	{
-		TYPE_TRACE, TRACEBUFADDR, TRACEBUFSIZE, 0, "trace:dsp",
-	},
+    {
+        TYPE_TRACE, TRACEBUFADDR, TRACEBUFSIZE, 0, "trace:dsp",
+    },
 
 };
 

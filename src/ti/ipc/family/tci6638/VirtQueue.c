@@ -161,7 +161,7 @@ Void VirtQueue_Instance_init(VirtQueue_Object *vq, UInt16 remoteProcId,
             break;
         case ID_A9_TO_DSP:
             vring_phys = (struct vring *) (VirtQueue_CORE0_MEM_VRING1 +
-		(DNUM * VirtQueue_VRING_OFFSET));
+                (DNUM * VirtQueue_VRING_OFFSET));
             break;
     }
 
@@ -277,7 +277,7 @@ Int16 VirtQueue_getAvailBuf(VirtQueue_Handle vq, Void **buf)
     struct vring *vring = vq->vringPtr;
 
     Log_print6(Diags_USER1, "getAvailBuf vq: 0x%x %d %d %d 0x%x 0x%x\n",
-	(IArg)vq,
+        (IArg)vq,
         vq->last_avail_idx, vring->avail->idx, vring->num,
         (IArg)&vring->avail, (IArg)vring->avail);
 

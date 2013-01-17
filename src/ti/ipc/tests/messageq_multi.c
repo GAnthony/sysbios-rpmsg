@@ -93,7 +93,7 @@ Void loopbackFxn(UArg arg0, UArg arg1)
     }
 
     System_printf("loopbackFxn: created MessageQ: %s; QueueID: 0x%x\n",
-	localQueueName, MessageQ_getQueueId(messageQ));
+                   localQueueName, MessageQ_getQueueId(messageQ));
 
     System_printf("Start the main loop: %d\n", arg0);
     while (msgId < NUMLOOPS) {

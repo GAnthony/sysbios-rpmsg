@@ -57,12 +57,12 @@
 
 /* Application message structures: */
 typedef struct {
-    MessageQ_MsgHeader	hdr;
+    MessageQ_MsgHeader hdr;
     Char                *inBuf;
 } InputMsg;
 
 typedef struct {
-    MessageQ_MsgHeader	hdr;
+    MessageQ_MsgHeader hdr;
     Char                *outBuf;
 } OutputMsg;
 
@@ -87,7 +87,7 @@ Void tsk1Fxn(UArg arg0, UArg arg1)
     }
 
     System_printf("tsk1Fxn: created MessageQ: %s; QueueID: 0x%x\n",
-	SLAVE_MESSAGEQNAME, MessageQ_getQueueId(messageQ));
+                   SLAVE_MESSAGEQNAME, MessageQ_getQueueId(messageQ));
 
     /* Use a static message for outMsg: no need to call MessageQ_alloc(): */
     MessageQ_staticMsgInit((MessageQ_Msg)&outMsg, sizeof(OutputMsg));

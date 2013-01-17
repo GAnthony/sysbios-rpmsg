@@ -160,7 +160,7 @@ static inline UInt mapVAtoPA(Void * va)
  */
 Void VirtQueue_startup(UInt16 remoteProcId, Bool isHost)
 {
-    Fxn	isr_fxn;
+    Fxn isr_fxn;
     IInterrupt_IntInfo intInfo;
 
     /* Initilize the IpcPower module */
@@ -487,14 +487,14 @@ Void VirtQueue_hostIsr(UArg msg)
             case (UInt)RP_MSG_HIBERNATION:
                 /* Notify Core1 */
                 InterruptM3_intSend(VirtQueue_appm3ProcId, NULL,
-			 (UInt)(RP_MSG_HIBERNATION));
+                                    (UInt)(RP_MSG_HIBERNATION));
                 IpcPower_suspend();
                 return;
 
             default:
                 /*
                  *  If the message isn't one of the above, it's either part of 
-		 * the 2-message synchronization sequence or it a virtqueue 
+                 * the 2-message synchronization sequence or it a virtqueue
                  * message.
                  */
                 break;

@@ -111,48 +111,48 @@
 #define RPMSG_IPU_C0_FEATURES         1
 
 struct resource_table {
-	UInt32 version;
-	UInt32 num;
-	UInt32 reserved[2];
-	UInt32 offset[12];
+    UInt32 version;
+    UInt32 num;
+    UInt32 reserved[2];
+    UInt32 offset[12];
 
-	/* rpmsg vdev entry */
-	struct fw_rsc_vdev rpmsg_vdev;
-	struct fw_rsc_vdev_vring rpmsg_vring0;
-	struct fw_rsc_vdev_vring rpmsg_vring1;
+    /* rpmsg vdev entry */
+    struct fw_rsc_vdev rpmsg_vdev;
+    struct fw_rsc_vdev_vring rpmsg_vring0;
+    struct fw_rsc_vdev_vring rpmsg_vring1;
 
-	/* data carveout entry */
-	struct fw_rsc_carveout data_cout;
+    /* data carveout entry */
+    struct fw_rsc_carveout data_cout;
 
-	/* text carveout entry */
-	struct fw_rsc_carveout text_cout;
+    /* text carveout entry */
+    struct fw_rsc_carveout text_cout;
 
-	/* trace entry */
-	struct fw_rsc_trace trace;
+    /* trace entry */
+    struct fw_rsc_trace trace;
 
-	/* devmem entry */
-	struct fw_rsc_devmem devmem0;
+    /* devmem entry */
+    struct fw_rsc_devmem devmem0;
 
-	/* devmem entry */
-	struct fw_rsc_devmem devmem1;
+    /* devmem entry */
+    struct fw_rsc_devmem devmem1;
 
-	/* devmem entry */
-	struct fw_rsc_devmem devmem2;
+    /* devmem entry */
+    struct fw_rsc_devmem devmem2;
 
-	/* devmem entry */
-	struct fw_rsc_devmem devmem3;
+    /* devmem entry */
+    struct fw_rsc_devmem devmem3;
 
-	/* devmem entry */
-	struct fw_rsc_devmem devmem4;
+    /* devmem entry */
+    struct fw_rsc_devmem devmem4;
 
-	/* devmem entry */
-	struct fw_rsc_devmem devmem5;
+    /* devmem entry */
+    struct fw_rsc_devmem devmem5;
 
-	/* devmem entry */
-	struct fw_rsc_devmem devmem6;
+    /* devmem entry */
+    struct fw_rsc_devmem devmem6;
 
-	/* devmem entry */
-	struct fw_rsc_devmem devmem7;
+    /* devmem entry */
+    struct fw_rsc_devmem devmem7;
 };
 
 #define TRACEBUFADDR (UInt32)&xdc_runtime_SysMin_Module_State_0_outbuf__A
