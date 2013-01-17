@@ -52,6 +52,8 @@
 #include "rsc_table_tci6614.h"
 #elif defined(TCI6614_v36)
 #include "rsc_table_tci6614_v3.6.h"
+#elif defined(TCI6638)
+#include "rsc_table_tci6638.h"
 #endif
 
 #define SLAVE_MESSAGEQNAME "SLAVE"
@@ -147,10 +149,9 @@ Int main(Int argc, Char* argv[])
     System_printf("%s:main: MultiProc id = %d\n", __FILE__, MultiProc_self());
 
 #if defined(TCI6614)
-    /* Reference resource table, until IpcMemory.xdt is enabled for TCI6614 */
-    System_printf("Resource Table: VRING0_DA_BASE: 0x%lx\n",
-                  resources[1].da_low);
-#elif defined (TCI6614_v36)
+    /* Reference resource table, until IpcMemory.xdt is enabled for TCI66xx */
+    System_printf("Resource Table: 0x%lx\n", resources);
+#elif defined (TCI6614_v36) || defined(TCI6638)
     System_printf("%d Resource Table entries at 0x%x\n",
                   ti_resources_ResourceTable.num, &ti_resources_ResourceTable);
 #endif

@@ -59,18 +59,31 @@ for (var i = 0; i < Build.targets.length; i++) {
     /* Build for all profiles */
     for (var profile in targ.profiles) {
 
-	/* Yuck, yuck, yuck! */
-	if (targ.isa == "674") {
-	    isaDefs = "-DOMAPL138";
-	}
-	else if (targ.isa == "66") {
-	    isaDefs = "-DTCI6614";
-	}
+	for (var j = 0; j < targ.platforms.length; j++) {
+		var platform = targ.platforms[j];
 
-        Pkg.addLibrary("lib/" + profile + "/" + Pkg.name, targ, {
-            profile: profile,
-            copts: "--gcc",   /* b/c Rpmsg.h requires gcc-isms */
-            defs: isaDefs
-        }).addObjects(SRCS);
+		/* Yuck, yuck, yuck! */
+		if (targ.isa == "674") {
+		    isaDefs = "-DOMAPL138";
+		}
+
+                print("platform:  " + platform);
+
+		/* NOTE: Right now, only one of these two can be built! */
+		if (platform.match(/^ti\.platforms\.evm6614\:DSP/)) {
+                    print("Setting isaDefs: -DTCI6614");
+		    isaDefs = "-DTCI6614";
+		}
+		if (platform.match(/^ti\.platform\.simKepler/)) {
+                    print("Setting isaDefs: -DTCI6638");
+		    isaDefs = "-DTCI6638";
+		}
+
+		Pkg.addLibrary("lib/" + profile + "/" + Pkg.name, targ, {
+		    profile: profile,
+		    copts: "--gcc",   /* b/c Rpmsg.h requires gcc-isms */
+		    defs: isaDefs
+		}).addObjects(SRCS);
+	}
     }
 }

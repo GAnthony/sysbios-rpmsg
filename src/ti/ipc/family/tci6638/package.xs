@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2012, Texas Instruments Incorporated
+ * Copyright (c) 2011-2012, Texas Instruments Incorporated
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -30,41 +30,46 @@
  * EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 /*
- *  ======== TransportVirtio.xs ================
+ *  ======== package.xs ========
  */
 
 /*
- *  ======== module$use ========
+ *  ======== close ========
  */
-function module$use()
+function close()
 {
-    var TransportVirtio = this;
-    xdc.useModule("ti.sdo.utils.MultiProc");
-    xdc.useModule("ti.sdo.ipc.MessageQ");
-    xdc.useModule("ti.sysbios.knl.Swi");
-    xdc.useModule("ti.ipc.transports.TransportVirtioSetup");
-    xdc.loadPackage("ti.ipc.namesrv");
-
-    print("Program.platformName: " + Program.platformName );
-    if (Program.cpu.deviceName == "OMAPL138") {
-        xdc.useModule("ti.ipc.family.omapl138.VirtQueue");
-    }
-    else if (Program.platformName.match(/6614/)) {
-        xdc.useModule("ti.ipc.family.tci6614.VirtQueue");
-    }
-    else if (Program.platformName.match(/Kepler/)) {
-        xdc.useModule("ti.ipc.family.tci6638.VirtQueue");
-    }
-    else
-    {
-        print("TransportVirtio.xs: Did not match any platform!");
-    }
+    /* bring in modules we use in this package */
+    xdc.useModule('ti.sysbios.knl.Swi');
+    xdc.useModule('ti.sysbios.hal.Cache');
 }
+
+
 /*
- *  ======== module$static$init ========
+ *  ======== getLibs ========
  */
-function module$static$init(mod, params)
+function getLibs(prog)
 {
-  /* Init Virtio Transport params */
-  mod.gateSwiHandle = null;
+    var suffix = prog.build.target.findSuffix(this);
+    if (suffix == null) {
+        /* no matching lib found in this package, return "" */
+        $trace("Unable to locate a compatible library, returning none.",
+                1, ['getLibs']);
+        return ("");
+    }
+
+    /* the location of the libraries are in lib/<profile>/* */
+    var name = this.$name + ".a" + suffix;
+    var lib = "lib/" + this.profile + "/" + name;
+
+
+    /*
+     * If the requested profile doesn't exist, we return the 'release' library.
+     */
+    if (!java.io.File(this.packageBase + lib).exists()) {
+        $trace("Unable to locate lib for requested '" + this.profile +
+                "' profile.  Using 'release' profile.", 1, ['getLibs']);
+        lib = "lib/release/" + name;
+    }
+
+    return (lib);
 }

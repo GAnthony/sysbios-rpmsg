@@ -255,6 +255,11 @@ void NameServerRemote_processMessage(NameServerRemote_Msg * msg)
                         NameServerRemoteRpmsg_module->semRemoteWait;
     UInt16 dstProc  = MultiProc_getId("HOST");
 
+    /* TEMP: Until we fix Settings.xs in IPC tree to make host = "HOST" */
+    if (dstProc == MultiProc_INVALIDID) {
+        dstProc = MultiProc_getId("HOST0");
+    }
+
     Assert_isTrue(msg != NULL, NULL);
 
     if (msg->request == NameServerRemoteRpmsg_REQUEST) {

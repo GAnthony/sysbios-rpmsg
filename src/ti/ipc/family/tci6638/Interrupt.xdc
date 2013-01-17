@@ -36,7 +36,7 @@
 
 /*!
  *  ======== Interrupt ========
- *  TCI6614 IPC interrupt manager
+ *  TCI66xx IPC interrupt manager
  */
 
 @ModuleStartup

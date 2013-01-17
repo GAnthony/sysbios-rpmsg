@@ -61,33 +61,38 @@ for (var i = 0; i < Build.targets.length; i++) {
                 // replace all ':' and '.' with '_' in platform name
                 platform.replace(/\:/g, "_").replace(/\./g, "_");
 
+	var defines = "";
 	if (platform.match(/^ti\.platforms\.evm6614\:DSP/)) {
-
-		Pkg.addExecutable(name + "/messageq_multicore",targ,platform, {
-		    cfgScript: "messageq_multicore",
-                    defs: "-D TCI6614"
-		}).addObjects(["messageq_multicore.c"]);
-
-		Pkg.addExecutable(name + "/dual_transports",targ,platform, {
-		    cfgScript: "dual_transports",
-//                    defs: "-D TCI6614"  // Commented out for v3.6 testing
-                    defs: "-D TCI6614_v36"
-		}).addObjects(["dual_transports.c"]);
-
-		Pkg.addExecutable(name + "/remoteproc_example",targ,platform, {
-		    cfgScript: "remoteproc_example",
-		}).addObjects(["remoteproc_example.c"]);
+		defines = "-D TCI6614";
+		//defines = "-D TCI6614_v36";
+	}
+	if (platform.match(/^ti\.platform\.simKepler/)) {
+		defines = "-D TCI6638";
 	}
 
+/*
+	Pkg.addExecutable(name + "/messageq_multicore",targ,platform, {
+	    cfgScript: "messageq_multicore",
+	    defs: defines
+	}).addObjects(["messageq_multicore.c"]);
+
+	Pkg.addExecutable(name + "/dual_transports",targ,platform, {
+	    cfgScript: "dual_transports",
+	    defs: defines
+	}).addObjects(["dual_transports.c"]);
+
+	Pkg.addExecutable(name + "/remoteproc_example",targ,platform, {
+	    cfgScript: "remoteproc_example",
+	}).addObjects(["remoteproc_example.c"]);
+*/
         Pkg.addExecutable(name + "/messageq_multi", targ, platform, {
             cfgScript: "messageq_common",
-            defs: "-D BENCHMARK -D TCI6614"
+            defs: "-D BENCHMARK " + defines
         }).addObjects(["messageq_multi.c"]);
 
         Pkg.addExecutable(name + "/messageq_single", targ, platform, {
             cfgScript: "messageq_common",
-//            defs: "-D BENCHMARK -D TCI6614" // Commented out for v3.6 test.
-            defs: "-D BENCHMARK -D TCI6614_v36"
+              defs: "-D BENCHMARK " + defines
         }).addObjects(["messageq_single.c"]);
 
 /*

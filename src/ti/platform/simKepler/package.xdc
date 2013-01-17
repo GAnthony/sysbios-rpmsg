@@ -30,41 +30,34 @@
  * EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 /*
- *  ======== TransportVirtio.xs ================
+ *  ======== package.xdc ========
+ *
  */
 
-/*
- *  ======== module$use ========
- */
-function module$use()
-{
-    var TransportVirtio = this;
-    xdc.useModule("ti.sdo.utils.MultiProc");
-    xdc.useModule("ti.sdo.ipc.MessageQ");
-    xdc.useModule("ti.sysbios.knl.Swi");
-    xdc.useModule("ti.ipc.transports.TransportVirtioSetup");
-    xdc.loadPackage("ti.ipc.namesrv");
+requires ti.catalog.c6000;
+requires xdc.platform [1,0,1];
 
-    print("Program.platformName: " + Program.platformName );
-    if (Program.cpu.deviceName == "OMAPL138") {
-        xdc.useModule("ti.ipc.family.omapl138.VirtQueue");
-    }
-    else if (Program.platformName.match(/6614/)) {
-        xdc.useModule("ti.ipc.family.tci6614.VirtQueue");
-    }
-    else if (Program.platformName.match(/Kepler/)) {
-        xdc.useModule("ti.ipc.family.tci6638.VirtQueue");
-    }
-    else
-    {
-        print("TransportVirtio.xs: Did not match any platform!");
-    }
+/*!
+ *  ======== ti.platform.simKepler ========
+ *  Custom version of the simKepler package, with device name: TMS320TCI6638
+ *
+ *  This package implements the interfaces (xdc.platform.IPlatform)
+ *  necessary to build and run executables on the Kepler simulator platform.
+ *
+ *  @a(Throws)
+ *  `XDCException` exceptions are thrown for fatal errors. The following error
+ *  codes are reported in the exception message:
+ *  @p(dlist)
+ *      -  `ti.platfoms.simKepler.LINK_TEMPLATE_ERROR`
+ *           This error is raised when this platform cannot found the default
+ *           linker command template `linkcmd.xdt` in the build target's
+ *           package. When a target does not contain this file, the config
+ *           parameter `{@link xdc.cfg.Program#linkTemplate}` must be set.
+ *  @p
+ */
+package ti.platform.simKepler [1,0,0,0] {
+    module Platform;
 }
 /*
- *  ======== module$static$init ========
+ *  @(#) ti.platforms.simKepler; 1, 0, 0, 0,21; 8-17-2012 22:17:57; /db/ztree/library/trees/platform/platform-n27x/src/
  */
-function module$static$init(mod, params)
-{
-  /* Init Virtio Transport params */
-  mod.gateSwiHandle = null;
-}

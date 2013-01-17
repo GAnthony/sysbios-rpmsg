@@ -62,7 +62,8 @@ var lnkOpts = {
 var platforms = {
     "ti.targets.elf.C64T"             : ["ti.platform.omap4430.dsp"],
     "ti.targets.elf.C674"             : ["ti.platforms.evmOMAPL138:DSP"],
-    "ti.targets.elf.C66"              : ["ti.platforms.evm6614:DSP"],
+    "ti.targets.elf.C66"              : ["ti.platform.simKepler"],
+//    "ti.targets.elf.C66"              : ["ti.platforms.evm6614:DSP"],
     "ti.targets.arm.elf.M3"           : ["ti.platform.omap4430.core0",
 					 "ti.platform.omap4430.core1"]
 };

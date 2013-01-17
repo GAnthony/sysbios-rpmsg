@@ -28,43 +28,75 @@
  * WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR
  * OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE,
  * EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+ *
  */
 /*
- *  ======== TransportVirtio.xs ================
+ *  ======== Interrupt.xs ========
  */
 
+var deviceSettings = {
+    'TMS320TCI6638' : {
+        IPCGR0:         0x02620240,
+        IPCAR0:         0x02620280,
+        IPCGRH:         0x0262027C,
+        IPCARH:         0x026202BC,
+        KICK0:          0x02620038,
+        KICK1:          0x0262003C,
+        INTERDSPINT:    90,
+        DSPINT:         5,
+    },
+}
+var Settings = xdc.loadCapsule('ti/sdo/ipc/family/Settings.xs');
+Settings.setDeviceAliases(deviceSettings, Settings.deviceAliases);
+var Hwi         = null;
+var Interrupt = null;
+var MultiProc   = null;
+
+/*
+ *  ======== module$meta$init ========
+ */
+function module$meta$init()
+{
+    /* Only process during "cfg" phase */
+    if (xdc.om.$name != "cfg") {
+        return;
+    }
+
+    var settings = deviceSettings[Program.cpu.deviceName];
+
+    this.IPCGR0         = settings.IPCGR0;
+    this.IPCAR0         = settings.IPCAR0;
+    this.IPCGRH         = settings.IPCGRH;
+    this.IPCARH         = settings.IPCARH;
+    this.KICK0          = settings.KICK0;
+    this.KICK1          = settings.KICK1;
+    this.INTERDSPINT    = settings.INTERDSPINT;
+    this.DSPINT         = settings.DSPINT;
+}
 /*
  *  ======== module$use ========
  */
 function module$use()
 {
-    var TransportVirtio = this;
-    xdc.useModule("ti.sdo.utils.MultiProc");
-    xdc.useModule("ti.sdo.ipc.MessageQ");
-    xdc.useModule("ti.sysbios.knl.Swi");
-    xdc.useModule("ti.ipc.transports.TransportVirtioSetup");
-    xdc.loadPackage("ti.ipc.namesrv");
+    Interrupt     = this;
 
-    print("Program.platformName: " + Program.platformName );
-    if (Program.cpu.deviceName == "OMAPL138") {
-        xdc.useModule("ti.ipc.family.omapl138.VirtQueue");
-    }
-    else if (Program.platformName.match(/6614/)) {
-        xdc.useModule("ti.ipc.family.tci6614.VirtQueue");
-    }
-    else if (Program.platformName.match(/Kepler/)) {
-        xdc.useModule("ti.ipc.family.tci6638.VirtQueue");
-    }
-    else
-    {
-        print("TransportVirtio.xs: Did not match any platform!");
-    }
+    Hwi         = xdc.useModule("ti.sysbios.family.c64p.Hwi");
+    MultiProc   = xdc.useModule("ti.sdo.utils.MultiProc");
 }
+
 /*
  *  ======== module$static$init ========
  */
 function module$static$init(mod, params)
 {
-  /* Init Virtio Transport params */
-  mod.gateSwiHandle = null;
+    var fxnTable = Interrupt.$object.fxnTable;
+
+    /* The function table length should be the number of IPCAR bits */
+    fxnTable.length = 32;
+    for (var i = 0; i < fxnTable.length; i++) {
+        fxnTable[i].func = null;
+        fxnTable[i].arg = 0;
+    }
+
+    mod.numPlugged = 0;
 }

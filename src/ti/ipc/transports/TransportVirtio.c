@@ -94,6 +94,8 @@
 #include <ti/ipc/family/omapl138/VirtQueue.h>
 #elif defined(TCI6614)
 #include <ti/ipc/family/tci6614/VirtQueue.h>
+#elif defined(TCI6638)
+#include <ti/ipc/family/tci6638/VirtQueue.h>
 #else
 #error unknown processor!
 #endif

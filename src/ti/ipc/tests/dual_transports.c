@@ -66,10 +66,12 @@
 /*  ----------------------------------- To get globals from .cfg Header */
 #include <xdc/cfg/global.h>
 
-#if defined(TCI6614_v36)
-#include "rsc_table_tci6614_v3.6.h"
-#else
+#if defined(TCI6614)
 #include "rsc_table_tci6614.h"
+#elif defined(TCI6614_v36)
+#include "rsc_table_tci6614_v3.6.h"
+#elif defined(TCI6638)
+#include "rsc_table_tci6638.h"
 #endif
 
 /* Used by multicoreMsgqFxn: */
@@ -194,9 +196,9 @@ Void multicoreFxn(UArg arg0, UArg arg1)
     System_printf("multicoreFxn: Entered...\n");
 
     nextProcId = (MultiProc_self() + 1) % MultiProc_getNumProcessors();
-    if (nextProcId == MultiProc_getId("HOST")) {
-	Assert_isTrue(MultiProc_getId("HOST") == 0, NULL);
-        nextProcId = 1;  /* Skip the host */
+    if (nextProcId == MultiProc_getId("HOST") ||
+        nextProcId == MultiProc_getId("HOST0")) {
+        nextProcId = 1;  /* Skip the host: Assumes host id is 0. */
     }
 
     /* Generate queue names based on own proc ID and total number of procs */
@@ -345,13 +347,12 @@ Int main(Int argc, Char* argv[])
     }
 #endif
 
-#if defined (TCI6614_v36)
+#if defined(TCI6614)
+    /* Reference resource table, until IpcMemory.xdt is enabled for TCI66xx */
+    System_printf("Resource Table: 0x%lx\n", resources);
+#elif defined (TCI6614_v36) || defined(TCI6638)
     System_printf("%d Resource Table entries at 0x%x\n",
                   ti_resources_ResourceTable.num, &ti_resources_ResourceTable);
-
-#else
-    /* Reference resource table, until IpcMemory.xdt is enabled for TCI6614 */
-    System_printf("Resource Table: 0x%lx\n", resources);
 #endif
     System_printf("main: MultiProc id: %d\n", MultiProc_self());
 

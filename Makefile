@@ -53,11 +53,13 @@ ti.targets.elf.C66 = /db/toolsrc/library/vendors2005/ti/c6x/7.2.0/Linux
 
 PKGLIST = src/ti/ipc/family/omapl138 \
 	src/ti/ipc/family/tci6614 \
+	src/ti/ipc/family/tci6638 \
 	src/ti/ipc/namesrv \
 	src/ti/ipc/rpmsg \
 	src/ti/ipc/tests \
 	src/ti/ipc/transports \
 	src/ti/ipc/ipcmgr \
+	src/ti/platform/simKepler \
 #	src/ti/resources
 
 XDCARGS = \

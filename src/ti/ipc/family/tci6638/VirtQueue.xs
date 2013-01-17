@@ -30,41 +30,40 @@
  * EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 /*
- *  ======== TransportVirtio.xs ================
+ *  ======== VirtQueue.xs ================
  */
 
-/*
+var MultiProc = null;
+var VirtQueue = null;
+
+ /*
  *  ======== module$use ========
  */
 function module$use()
 {
-    var TransportVirtio = this;
-    xdc.useModule("ti.sdo.utils.MultiProc");
-    xdc.useModule("ti.sdo.ipc.MessageQ");
-    xdc.useModule("ti.sysbios.knl.Swi");
-    xdc.useModule("ti.ipc.transports.TransportVirtioSetup");
-    xdc.loadPackage("ti.ipc.namesrv");
 
-    print("Program.platformName: " + Program.platformName );
-    if (Program.cpu.deviceName == "OMAPL138") {
-        xdc.useModule("ti.ipc.family.omapl138.VirtQueue");
-    }
-    else if (Program.platformName.match(/6614/)) {
-        xdc.useModule("ti.ipc.family.tci6614.VirtQueue");
-    }
-    else if (Program.platformName.match(/Kepler/)) {
-        xdc.useModule("ti.ipc.family.tci6638.VirtQueue");
-    }
-    else
-    {
-        print("TransportVirtio.xs: Did not match any platform!");
+    VirtQueue = this;
+    //IpcMemory   = xdc.useModule("ti.resources.IpcMemory");
+    MultiProc   = xdc.useModule("ti.sdo.utils.MultiProc");
+
+    Swi = xdc.useModule("ti.sysbios.knl.Swi");
+    Interrupt = xdc.useModule("ti.ipc.family.tci6638.Interrupt");
+
+    if (MultiProc.id == MultiProc.INVALIDID) {
+        var Startup = xdc.useModule('xdc.runtime.Startup');
+        Startup.firstFxns.$add(VirtQueue.init);
     }
 }
+
 /*
  *  ======== module$static$init ========
  */
 function module$static$init(mod, params)
 {
-  /* Init Virtio Transport params */
-  mod.gateSwiHandle = null;
+  /* Init VirtQueue params */
+  mod.numQueues = 0;
+  mod.hostSlaveSynced = 0;
+  mod.virtQueueInitialized = 0;
+  mod.queueRegistry = null;
+  mod.traceBufPtr = null;
 }

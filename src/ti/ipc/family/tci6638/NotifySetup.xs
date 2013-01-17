@@ -28,43 +28,28 @@
  * WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR
  * OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE,
  * EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
- */
+ * */
 /*
- *  ======== TransportVirtio.xs ================
+ *  ======== NotifySetup.xs ========
+ *
  */
+
+var NotifySetup  = null;
+var MultiProc    = null;
+var Notify       = null;
+var NotifyDriverShm = null;
 
 /*
  *  ======== module$use ========
  */
 function module$use()
 {
-    var TransportVirtio = this;
-    xdc.useModule("ti.sdo.utils.MultiProc");
-    xdc.useModule("ti.sdo.ipc.MessageQ");
-    xdc.useModule("ti.sysbios.knl.Swi");
-    xdc.useModule("ti.ipc.transports.TransportVirtioSetup");
-    xdc.loadPackage("ti.ipc.namesrv");
+    NotifySetup = this;
+    NotifyDriverShm = xdc.useModule('ti.sdo.ipc.notifyDrivers.NotifyDriverShm');
+    Notify = xdc.useModule('ti.sdo.ipc.Notify');
+    MultiProc = xdc.useModule('ti.sdo.utils.MultiProc');
+}
 
-    print("Program.platformName: " + Program.platformName );
-    if (Program.cpu.deviceName == "OMAPL138") {
-        xdc.useModule("ti.ipc.family.omapl138.VirtQueue");
-    }
-    else if (Program.platformName.match(/6614/)) {
-        xdc.useModule("ti.ipc.family.tci6614.VirtQueue");
-    }
-    else if (Program.platformName.match(/Kepler/)) {
-        xdc.useModule("ti.ipc.family.tci6638.VirtQueue");
-    }
-    else
-    {
-        print("TransportVirtio.xs: Did not match any platform!");
-    }
-}
 /*
- *  ======== module$static$init ========
+ *  @(#) ti.sdo.ipc.family.c647x; 1, 0, 0, 0,4; 10-19-2011 10:45:48; /db/vtree/library/trees/ipc/ipc.git/src/ null
  */
-function module$static$init(mod, params)
-{
-  /* Init Virtio Transport params */
-  mod.gateSwiHandle = null;
-}
