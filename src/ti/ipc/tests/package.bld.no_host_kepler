@@ -88,7 +88,6 @@ for (var i = 0; i < Build.targets.length; i++) {
 	Pkg.addExecutable(name + "/remoteproc_example",targ,platform, {
 	    cfgScript: "remoteproc_example",
 	}).addObjects(["remoteproc_example.c"]);
-*/
 
         Pkg.addExecutable(name + "/messageq_multi", targ, platform, {
             cfgScript: "messageq_common",
@@ -99,7 +98,7 @@ for (var i = 0; i < Build.targets.length; i++) {
             cfgScript: "messageq_common",
               defs: "-D BENCHMARK " + defines
         }).addObjects(["messageq_single.c"]);
-
+*/
 /*
         Pkg.addExecutable(name + "/nano_test", targ, platform, {
             cfgScript: "messageq_common"

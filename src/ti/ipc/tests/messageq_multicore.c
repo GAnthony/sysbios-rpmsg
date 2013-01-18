@@ -66,7 +66,14 @@
 
 /* Define this to eliminate VIRTIO DEV and VRINGS from rsc_table: */
 #define  TRACE_RESOURCE_ONLY 1
+#if defined(TCI6614)
 #include "rsc_table_tci6614.h"
+#elif defined(TCI6614_v36)
+#include "rsc_table_tci6614_v3.6.h"
+#elif defined(TCI6638)
+#include "rsc_table_tci6638.h"
+#endif
+
 
 #define HEAP_NAME   "myHeapBuf"
 #define HEAPID      0
@@ -242,8 +249,13 @@ Int main(Int argc, Char* argv[])
 {
     Int status;
 
-    /* Reference resource table, until IpcMemory.xdt is enabled for TCI6614 */
+#if defined(TCI6614)
+    /* Reference resource table, until IpcMemory.xdt is enabled for TCI66xx */
     System_printf("Resource Table: 0x%lx\n", resources);
+#elif defined (TCI6614_v36) || defined(TCI6638)
+    System_printf("%d Resource Table entries at 0x%x\n",
+                  ti_resources_ResourceTable.num, &ti_resources_ResourceTable);
+#endif
 
     nextProcId = (MultiProc_self() + 1) % MultiProc_getNumProcessors();
 
