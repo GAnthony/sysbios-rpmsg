@@ -66,11 +66,12 @@ struct resource_table {
         UInt32 reserved[2];
         UInt32 offset[13];
 
+#ifndef TRACE_RESOURCE_ONLY
         /* rpmsg vdev entry */
         struct fw_rsc_vdev rpmsg_vdev;
         struct fw_rsc_vdev_vring rpmsg_vring0;
         struct fw_rsc_vdev_vring rpmsg_vring1;
-
+#endif
         /* data carveout entry */
         struct fw_rsc_carveout data_cout;
 
@@ -83,19 +84,30 @@ extern char * xdc_runtime_SysMin_Module_State_0_outbuf__A;
 #define TRACEBUFADDR (uint32_t)&xdc_runtime_SysMin_Module_State_0_outbuf__A
 #define TRACEBUFSIZE 0x8000
 
+#define CARVEOUTADDR TRACEBUFADDR
+#define CARVEOUTSIZE TRACEBUFSIZE
+
 #pragma DATA_SECTION(ti_resources_ResourceTable, ".resource_table")
 #pragma DATA_ALIGN(ti_resources_ResourceTable, 4096)
 
 struct resource_table ti_resources_ResourceTable = {
     1, /* we're the first version that implements this */
+#ifndef TRACE_RESOURCE_ONLY
     3, /* number of entries in the table */
+#else
+    2,
+#endif
     0, 0, /* reserved, must be zero */
     /* offsets to entries */
     {
+#ifndef TRACE_RESOURCE_ONLY
         offsetof(struct resource_table, rpmsg_vdev),
+#endif
+        offsetof(struct resource_table, data_cout),
         offsetof(struct resource_table, trace),
     },
 
+#ifndef TRACE_RESOURCE_ONLY
     /* rpmsg vdev entry */
     {
         TYPE_VDEV, VIRTIO_ID_RPMSG, 0,
@@ -105,15 +117,15 @@ struct resource_table ti_resources_ResourceTable = {
     /* the two vrings */
     { RPMSG_VRING0_DA, 4096, RPMSG_VQ0_SIZE, 1, 0 },
     { RPMSG_VRING1_DA, 4096, RPMSG_VQ1_SIZE, 2, 0 },
+#endif
 
     {
-    TYPE_CARVEOUT, TRACEBUFADDR, TRACEBUFADDR, TRACEBUFSIZE, 0, 0, "TRACE_CARVEOUT",
+        TYPE_CARVEOUT, CARVEOUTADDR, CARVEOUTADDR, CARVEOUTSIZE, 0, 0, "carveout:dsp",
     },
 
     {
     TYPE_TRACE, TRACEBUFADDR, TRACEBUFSIZE, 0, "trace:dsp",
     },
-
 };
 
 #endif /* _RSC_TABLE_TCI6638_H_ */
